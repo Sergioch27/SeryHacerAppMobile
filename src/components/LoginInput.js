@@ -7,8 +7,6 @@ const LoginInput = (props, {password,username}) => {
     return (
                 <TextInput
                     {...props}
-                    value={text}
-                    onChangeText={setText}
                 />
     )
 }

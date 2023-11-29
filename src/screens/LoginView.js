@@ -1,4 +1,4 @@
-import React from "react";
+import React, {useCallback, useState} from "react";
 import LoginInput from "../components/LoginInput";
 import {
   StyleSheet,
@@ -7,18 +7,45 @@ import {
   View,
   Text,
   Pressable,
-  SafeAreaView 
+  SafeAreaView,
+  Button,
+  Linking
 } from "react-native";
+import { LoginRequest, LoginOutUser } from "../../service/login";
 
+const LinkURl = 'https://www.espacioseryhacer.com/privacy-policy';
 
+const OpenURL = ({url, children}) =>{
+  const handlePress = useCallback (async ()=>{
+    const supported = await Linking.canOpenURL(url);
+    if (supported) {
+      await Linking.openURL(url);
+    } else {
+      Alert.alert('Error en Link')
+    }
+  },[url]);
+  return <Button title={children} onPress={handlePress} />;
+}
 
   const images = [
     { logo: require('../../assets/logotipo.png') },
     { background: require('../../assets/SALA-DE-ESPERA.jpg') },
   ];
-
-
   const LoginView = ()=>{
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+
+    const handleLogin = async ()=>{
+      try {
+        const DataUser  = await LoginRequest(username,password);
+        console.log('Se Inicio Sesión con existo', DataUser.token);
+        Alert.alert('NOMBRE DEL USUARIO: ', DataUser.user_display_name);
+      }
+      catch (err){
+        console.error('Error de inicio de sesión', err);
+      }
+    }
+
     return (
         <>
                     <SafeAreaView >
@@ -39,14 +66,18 @@ import {
         style={styles.input}
             email
             placeholder={'USUARIO'}
+            value={username}
+            onChangeText={setUsername}
         />
         <LoginInput
         style={styles.input}
                 password
                 placeholder={'CONTRASEÑA'}
+                value={password}
+                onChangeText={setPassword}
                 secureTextEntry={true}
         />
-              <Pressable  style={styles.buttonLogin}  onPress={() => Alert.alert('Simple Button pressed')}>
+              <Pressable  style={styles.buttonLogin}  onPress={handleLogin}>
                   <Text style={styles.textPressable}>INICIAR SESIÓN</Text>
               </Pressable>
         </View>
@@ -64,7 +95,8 @@ import {
             </View>
 
             <View style={styles.ContentTextSmall}>
-              <Text style={styles.TextSmall}>Al iniciar sesión o registrarte, aceptas los términos y políticas de privacidad</Text>
+              <Text style={styles.TextSmall}>Al iniciar sesión o registrarte, aceptas los</Text>
+              <OpenURL url={LinkURl}>términos y políticas de privacidad</OpenURL>
             </View>
             </SafeAreaView>
             </>
