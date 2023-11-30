@@ -5,6 +5,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import React from 'react';
 import LoginView from './src/screens/LoginView';
+import RegisterView from './src/screens/RegisterView';
+
 
 const Stack = createStackNavigator();
 
@@ -16,6 +18,11 @@ export default function App() {
             name="Home"
             options={{ headerShown: false }}
             component={LoginView}
+          />
+          <Stack.Screen
+            name="registerer"
+            options={{ headerShown: false }}
+            component={RegisterView}
           />
         </Stack.Navigator>
       </NavigationContainer>

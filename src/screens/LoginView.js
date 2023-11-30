@@ -62,56 +62,56 @@ const OpenURL = ({url, children}) =>{
   }
     return (
         <>
-                    <SafeAreaView >
-        <View style={styles.contentImage} >
-        <Image
-            style={styles.imageLogo}
-            source={images[0].logo}
-        />
-        </View>
-        <View style={styles.contentText}>
-          <Text style={styles.textTitle}>
-          ESPACIO DE REFLEXIÓN PARA
-          LA ACCIÓN.
-          </Text>
-        </View>
-        <View style={styles.contentInput}>
-        <LoginInput
-        style={styles.input}
-            email
-            placeholder={'USUARIO'}
-            value={username}
-            onChangeText={setUsername}
-        />
-        <LoginInput
-        style={styles.input}
-                password
-                placeholder={'CONTRASEÑA'}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={true}
-        />
-              <Pressable  style={styles.buttonLogin}  onPress={handleLogin}>
-                  {textButton}
-              </Pressable>
-        </View>
-              <View style={styles.ContainerLine}>
-                  <View style={styles.line} />
-                    <View style={styles.circle}>
-              <View style={styles.circleInner} />
-                </View>
-              <View style={styles.line} />
+        <SafeAreaView >
+            <View style={styles.contentImage} >
+            <Image
+                style={styles.imageLogo}
+                source={images[0].logo}
+            />
+            </View>
+            <View style={styles.contentText}>
+              <Text style={styles.textTitle}>
+              ESPACIO DE REFLEXIÓN PARA
+              LA ACCIÓN.
+              </Text>
             </View>
             <View style={styles.contentInput}>
-              <Pressable  style={styles.buttonLogin}  onPress={() => Alert.alert('Simple Button pressed')}>
-                  <Text style={styles.textPressable}>REGÍSTRATE</Text>
-              </Pressable>
+            <LoginInput
+            style={styles.input}
+                email
+                placeholder={'USUARIO'}
+                value={username}
+                onChangeText={setUsername}
+            />
+            <LoginInput
+            style={styles.input}
+                    password
+                    placeholder={'CONTRASEÑA'}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={true}
+            />
+                  <Pressable  style={styles.buttonLogin}  onPress={handleLogin}>
+                      {textButton}
+                  </Pressable>
             </View>
+                  <View style={styles.ContainerLine}>
+                      <View style={styles.line} />
+                        <View style={styles.circle}>
+                  <View style={styles.circleInner} />
+                    </View>
+                  <View style={styles.line} />
+                </View>
+                <View style={styles.contentInput}>
+                  <Pressable  style={styles.buttonLogin}  onPress={() => this.props.navigation.navigate('registerer')}>
+                      <Text style={styles.textPressable}>REGÍSTRATE</Text>
+                  </Pressable>
+                </View>
 
-            <View style={styles.ContentTextSmall}>
-              <Text style={styles.TextSmall}>Al iniciar sesión o registrarte, aceptas los</Text>
-              <OpenURL url={LinkURl}>términos y políticas de privacidad</OpenURL>
-            </View>
+                <View style={styles.ContentTextSmall}>
+                  <Text style={styles.TextSmall}>Al iniciar sesión o registrarte, aceptas los</Text>
+                  <OpenURL url={LinkURl}>términos y políticas de privacidad</OpenURL>
+                </View>
             </SafeAreaView>
             </>
     )
