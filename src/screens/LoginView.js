@@ -1,4 +1,4 @@
-import React, {useCallback, useState} from "react";
+import React, {useCallback, useEffect, useState} from "react";
 import LoginInput from "../components/LoginInput";
 import {
   StyleSheet,
@@ -12,10 +12,18 @@ import {
   Linking
 } from "react-native";
 import { LoginRequest, LoginOutUser } from "../../service/login";
+import Loading from "../components/smart_components/Loading";
+
+const LoginView = ()=>{
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  
+
 
 const LinkURl = 'https://www.espacioseryhacer.com/privacy-policy';
-
 const OpenURL = ({url, children}) =>{
+
   const handlePress = useCallback (async ()=>{
     const supported = await Linking.canOpenURL(url);
     if (supported) {
@@ -31,21 +39,27 @@ const OpenURL = ({url, children}) =>{
     { logo: require('../../assets/logotipo.png') },
     { background: require('../../assets/SALA-DE-ESPERA.jpg') },
   ];
-  const LoginView = ()=>{
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-
-    const handleLogin = async ()=>{
-      try {
-        const DataUser  = await LoginRequest(username,password);
-        console.log('Se Inicio Sesión con existo', DataUser.token);
-        Alert.alert('NOMBRE DEL USUARIO: ', DataUser.user_display_name);
-      }
-      catch (err){
-        console.error('Error de inicio de sesión', err);
-      }
+  const textButton = () => {
+    if (loading){
+      return <Loading></Loading>
+    }else {
+      return <Text style={styles.textPressable}>INICIAR SESIÓN</Text>
     }
-
+  }
+  const handleLogin = async ()=>{
+    try {
+      setLoading(true)
+      const DataUser  = await LoginRequest(username,password);
+      console.log('Se Inicio Sesión con existo', DataUser.token);
+      Alert.alert('NOMBRE DEL USUARIO: ', DataUser.user_display_name);
+    }
+    catch (err){
+      console.error('Error de inicio de sesión', err);
+    }
+    finally{
+      setLoading(false)
+    }
+  }
     return (
         <>
                     <SafeAreaView >
@@ -78,7 +92,7 @@ const OpenURL = ({url, children}) =>{
                 secureTextEntry={true}
         />
               <Pressable  style={styles.buttonLogin}  onPress={handleLogin}>
-                  <Text style={styles.textPressable}>INICIAR SESIÓN</Text>
+                  {textButton}
               </Pressable>
         </View>
               <View style={styles.ContainerLine}>
