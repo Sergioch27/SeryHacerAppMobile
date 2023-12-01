@@ -8,13 +8,43 @@ const images = [
 
 const RegisterView =()=>{
     const [FormData, setFormData] = useState([
-        { 
-
+        {
+            user_login: '',
+            user_pass: '',
+            user_email: '',
+            display_name: '',
+            first_name: '',
+            last_name: '',
+            phone: '',
+            user_dni: '',
+            address_user: '',
+            profesión_user: '',
+            university_user: '',
+            refer_user: ''
         }
     ])
     const [stepForm1,setstepForm1] = useState([
-
+        {
+            user_login: '',
+            first_name: '',
+            last_name: '',
+            user_dni: '',
+        }
     ])
+    const [stepForm2,setstepForm2] = useState([
+        {
+            user_pass: '',
+        }
+    ])
+    const [stepForm3,setstepForm3] = useState([
+        {
+            phone: '',
+            address_user: '',
+            profesión_user: '',
+            university_user: '',
+        }
+    ])
+
     return (
         <SafeAreaView>
             <View style={styles.contentImage} >
