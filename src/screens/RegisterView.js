@@ -8,12 +8,12 @@ const images = [
 
 const RegisterView =()=>{
     const [FormData, setFormData] = useState([
-        {
+        { 
 
         }
     ])
     const [stepForm1,setstepForm1] = useState([
-        
+
     ])
     return (
         <SafeAreaView>
