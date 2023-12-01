@@ -11,16 +11,17 @@ import RegisterView from './src/screens/RegisterView';
 const Stack = createStackNavigator();
 
 export default function App() {
+  const ref = React.useRef(null);
   return (
     <NavigationContainer>
         <Stack.Navigator>
           <Stack.Screen
-            name="Home"
+            name="LoginView"
             options={{ headerShown: false }}
             component={LoginView}
           />
           <Stack.Screen
-            name="registerer"
+            name="RegisterView"
             options={{ headerShown: false }}
             component={RegisterView}
           />

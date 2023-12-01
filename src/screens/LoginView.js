@@ -1,5 +1,6 @@
 import React, {useCallback, useEffect, useState} from "react";
 import LoginInput from "../components/LoginInput";
+import { useNavigation } from '@react-navigation/native';
 import {
   StyleSheet,
   Image,
@@ -19,7 +20,7 @@ const LoginView = ()=>{
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   
-
+  const navigation = useNavigation();
 
 const LinkURl = 'https://www.espacioseryhacer.com/privacy-policy';
 const OpenURL = ({url, children}) =>{
@@ -103,7 +104,7 @@ const OpenURL = ({url, children}) =>{
                   <View style={styles.line} />
                 </View>
                 <View style={styles.contentInput}>
-                  <Pressable  style={styles.buttonLogin}  onPress={() => this.props.navigation.navigate('registerer')}>
+                  <Pressable  style={styles.buttonLogin}  onPress={() => navigation.navigate('RegisterView')}>
                       <Text style={styles.textPressable}>REGÍSTRATE</Text>
                   </Pressable>
                 </View>
