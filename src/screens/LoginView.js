@@ -108,7 +108,6 @@ const OpenURL = ({url, children}) =>{
                       <Text style={styles.textPressable}>REGÍSTRATE</Text>
                   </Pressable>
                 </View>
-
                 <View style={styles.ContentTextSmall}>
                   <Text style={styles.TextSmall}>Al iniciar sesión o registrarte, aceptas los</Text>
                   <OpenURL url={LinkURl}>términos y políticas de privacidad</OpenURL>
