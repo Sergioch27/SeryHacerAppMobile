@@ -17,7 +17,7 @@ const RegisterView = () => {
         phone: '',
         user_dni: '',
         address_user: '',
-        profession_user: '',  // Corregí la tipografía aquí
+        profession_user: '',
         university_user: '',
     });
     
