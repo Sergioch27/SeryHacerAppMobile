@@ -17,9 +17,10 @@ const RegisterView = () => {
         phone: '',
         user_dni: '',
         address_user: '',
-        profusion_user: '',
+        profession_user: '',  // Corregí la tipografía aquí
         university_user: '',
     });
+    
     const [currentStep, setCurrentStep] = useState(1);
 
     const validateFields = () => {
