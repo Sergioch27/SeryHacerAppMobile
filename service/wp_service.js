@@ -21,4 +21,14 @@ const LoginRequest = async (username,password)=>{
 const LoginOutUser = async()=>{
     await AsyncStorage.removeItem('user_token');
 }
-export {LoginOutUser, LoginRequest}
+const RegisterRequest = async (formData)=>{
+    try {
+        const DataRegister = await axios.post(API_BASE_URL + 'app/v1/register', formData);
+        return DataRegister.data;
+    }
+    catch (err){
+        console.error('Error de registro de usuario', err);
+        throw err;
+    }
+}
+export {LoginOutUser, LoginRequest, RegisterRequest}

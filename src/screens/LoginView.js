@@ -12,7 +12,7 @@ import {
   Button,
   Linking
 } from "react-native";
-import { LoginRequest, LoginOutUser } from "../../service/login";
+import { LoginRequest, LoginOutUser } from "../../service/wp_service";
 import Loading from "../components/smart_components/Loading";
 
 const LoginView = ()=>{
