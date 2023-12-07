@@ -18,6 +18,7 @@ const LoginRequest = async (username,password)=>{
         throw err;
     }
 }
+
 const LoginOutUser = async()=>{
     await AsyncStorage.removeItem('user_token');
 }
