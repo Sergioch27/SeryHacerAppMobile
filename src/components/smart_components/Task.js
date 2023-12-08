@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, Button, SafeAreaView, StyleSheet} from 'react-native';
+import { View, Text, Pressable, Modal, Button, SafeAreaView, StyleSheet} from 'react-native';
 import Checkbox from 'expo-checkbox';
 
 const Task = ({ task, onEliminar, onCompletar }) => {
@@ -19,14 +19,14 @@ const Task = ({ task, onEliminar, onCompletar }) => {
     <SafeAreaView>
       <View style={styles.ContentTask}>
       <Checkbox value={completada} onValueChange={toggleCompletada} color={completada ? 'green' : undefined} />
-        <TouchableOpacity onPress={onCompletar}>
+        <Pressable onPress={onCompletar}>
           <Text style={{ color: completada ? 'green' : 'black', textDecorationLine: completada ? 'line-through' : 'none' }}>
             {task.texto}
           </Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={abrirModal}>
+        </Pressable>
+        <Pressable onPress={abrirModal}>
           <Text style={{ color: 'red' }}>Eliminar</Text>
-        </TouchableOpacity>
+        </Pressable>
 
         <Modal visible={modalVisible} animationType="slide" transparent={true}>
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
