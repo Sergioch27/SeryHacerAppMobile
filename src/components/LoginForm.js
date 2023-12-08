@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState} from "react";
+import React, {useCallback, useState} from "react";
 import LoginInput from "./smart_components/LoginInput";
 import { useNavigation } from '@react-navigation/native';
 import {

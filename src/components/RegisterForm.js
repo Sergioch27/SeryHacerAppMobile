@@ -1,6 +1,8 @@
 import React, { useState } from "react";
-import { View, Text, SafeAreaView, StyleSheet, Image, TextInput, Alert, TouchableOpacity } from "react-native";
+import { View, Text, SafeAreaView, StyleSheet, Image, TextInput, Alert, Pressable } from "react-native";
 import { RegisterRequest } from "../../service/wp_service";
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { AntDesign } from '@expo/vector-icons'; 
 
 const images = [
     { logo: require('../../assets/logotipo.png') },
@@ -85,7 +87,7 @@ const RegisterForm = () => {
                         />
                         <TextInput
                             style={styles.input}
-                            placeholder="CORREO ELECTRONICO"
+                            placeholder="CORREO ELECTRÓNICO"
                             value={formData.user_email}
                             onChangeText={(text) => setFormData({ ...formData, user_email: text, user_login: text })}
                         />
@@ -116,7 +118,7 @@ const RegisterForm = () => {
                         />
                         <TextInput
                             style={styles.input}
-                            placeholder="PROFESION"
+                            placeholder="PROFESIÓN"
                             value={formData.profession_user}
                             onChangeText={(text) => setFormData({ ...formData, profession_user: text })}
                         />
@@ -155,16 +157,20 @@ const RegisterForm = () => {
                 <View>
                     {renderFormInputs()}
                 </View>
+                <View style={styles.contentButton}>
                 {currentStep > 1 && (
-                        <TouchableOpacity style={styles.button} onPress={handlePrev}>
-                            <Text style={styles.buttonText}>Anterior</Text>
-                        </TouchableOpacity>
+                    <View style={styles.ButtonPrevious}>
+                        <Pressable style={styles.button1} onPress={handlePrev}>
+                            <AntDesign name="leftcircle" size={60} color="#A168DE" />
+                        </Pressable>
+                    </View>
                     )}
-                <TouchableOpacity style={styles.button} onPress={handleNext}>
-                    <Text style={styles.buttonText}>
-                        {currentStep < 3 ? '>' : 'Enviar'}
-                    </Text>
-                </TouchableOpacity>
+                <View style={styles.ButtonNext}>
+                    <Pressable style={styles.button} onPress={handleNext}>
+                        {currentStep < 3 ? <AntDesign name="rightcircle" size={60} color="#A168DE" /> : 'Enviar'}
+                    </Pressable>
+                </View>
+                </View>
             </View>
         </SafeAreaView>
     );
@@ -198,13 +204,31 @@ const styles = StyleSheet.create({
       button: {
         height: 60,
         width: 60,
-        justifyContent: "center",
-        alignItems: "center",
+        justifyContent: "flex-end",
+        alignItems: "end",
         borderRadius:100,
-        backgroundColor: '#A168DE',
+
       },
       buttonText:{
         fontSize:50
+      },
+      contentButton: {
+        flexDirection: 'row',
+        alignSelf: 'center',
+      },
+      ButtonPrevious:{
+        flex:1,
+        flexDirection: 'row',
+        justifyContent: 'flex-start',
+        alignItems: 'flex-start',
+        marginLeft:50
+      },
+      ButtonNext:{
+        flex:1,
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        alignItems: 'flex-end',
+        marginRight:50
       }
 });
 
