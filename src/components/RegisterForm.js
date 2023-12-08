@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, SafeAreaView, StyleSheet, Image, TextInput, Alert, Pressable } from "react-native";
 import { RegisterRequest } from "../../service/wp_service";
-import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { AntDesign } from '@expo/vector-icons'; 
 
 const images = [
@@ -24,7 +23,7 @@ const RegisterForm = () => {
         university_user: '',
     });
     
-    const [currentStep, setCurrentStep] = useState(1);
+    const [currentStep, setCurrentStep] = useState(3);
 
     const validateFields = () => {
         const requiredFields = {
@@ -129,14 +128,13 @@ const RegisterForm = () => {
             return (
                 <>
                 <View styles={styles.contentInput}>
-
-                </View>
-                    <TextInput
-                        tyle={styles.input}
+                <TextInput
+                        style={styles.input}
                         placeholder="CONTRASEÑA"
                         value={formData.user_pass}
                         onChangeText={(text) => setFormData({ ...formData, user_pass: text })}
                     />
+                </View>
                 </>
             );
         }
@@ -166,8 +164,8 @@ const RegisterForm = () => {
                     </View>
                     )}
                 <View style={styles.ButtonNext}>
-                    <Pressable style={styles.button} onPress={handleNext}>
-                        {currentStep < 3 ? <AntDesign name="rightcircle" size={60} color="#A168DE" /> : 'Enviar'}
+                    <Pressable  onPress={handleNext}>
+                        {currentStep < 3 ? <AntDesign style={styles.button} name="rightcircle" size={60} color="#A168DE" /> : <Text style={styles.buttonLogin}>Enviar</Text>}
                     </Pressable>
                 </View>
                 </View>
@@ -229,7 +227,18 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
         alignItems: 'flex-end',
         marginRight:50
-      }
+      },
+      buttonLogin:{
+        height: 40,
+        width: 100,
+        textAlign: 'center',
+        justifyContent: "center",
+        alignItems: "flex-end",
+        padding:10,
+        borderRadius:20,
+        backgroundColor: '#A168DE',
+      },
+  
 });
 
 export default RegisterForm;

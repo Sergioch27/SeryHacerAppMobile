@@ -1,4 +1,3 @@
-import React, { useState } from "react";
 import RegisterForm from "../components/RegisterForm";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
