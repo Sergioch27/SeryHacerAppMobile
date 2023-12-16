@@ -1,4 +1,4 @@
-import React, {useCallback, useState} from "react";
+import React, {useCallback, useState, useEffect} from "react";
 import LoginInput from "./smart_components/LoginInput";
 import { useNavigation } from '@react-navigation/native';
 import {
@@ -10,16 +10,22 @@ import {
   Pressable,
   SafeAreaView,
   Button,
-  Linking
+  Linking,
+  Modal
 } from "react-native";
-import { LoginRequest, LoginOutUser } from "../../service/wp_service";
+import { LoginRequest, LoginOutUser, LoginRequestDev, LoginSuperUser } from "../../service/wp_service";
 import Loading from "../components/smart_components/Loading";
+import {ModalViewLogin, ModalViewDev} from "./smart_components/Modals";
+import AsyncStorage from "@react-native-async-storage/async-storage"
 
 const LoginForm = ()=>{
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  
+  const [isModalVisible1, setIsModalVisible1] = useState(false);
+  const [isModalVisible2, setIsModalVisible2] = useState(false);
+  const [pressCount, setPressCount] = useState(0);
+
   const navigation = useNavigation();
 
 const LinkURl = 'https://www.espacioseryhacer.com/privacy-policy';
@@ -33,15 +39,33 @@ const OpenURL = ({url, children}) =>{
       Alert.alert('Error en Link')
     }
   },[url]);
-  return <Button title={children} onPress={handlePress} />;
-}
+  return <Button title={children} onPress={handlePress} />;}
 const validateFields = () => {
     if (username.trim() !== '' && password.trim() !== '') {
         return true;
     } else {
-        Alert.alert('Por Favor, complete todos los campos');
+      setIsModalVisible1(true);
         return false;
     }
+};
+useEffect(() => {
+  if (isModalVisible1) {
+      setIsModalVisible1(true);
+  }
+}, [isModalVisible1]);
+
+const closeModal = () => {
+  setIsModalVisible1(false);
+};
+
+useEffect(() => {
+  if (isModalVisible2) {
+      setIsModalVisible2(true);
+  }
+}, [isModalVisible2]);
+
+const closeModal2 = () => {
+  setIsModalVisible2(false);
 };
 
   const images = [
@@ -60,7 +84,7 @@ const validateFields = () => {
         try {
             setLoading(true)
             const DataUser  = await LoginRequest(username,password);
-            console.log('Se Inicio Sesión con existo', DataUser.token);
+            console.log('Se Inicio Sesión con existo', DataUser);
             Alert.alert('NOMBRE DEL USUARIO: ', DataUser.user_display_name);
           }
           catch (err){
@@ -71,14 +95,53 @@ const validateFields = () => {
         }
         }
   }
+  const handleLogoPress = async () => {
+    const newPressCount = pressCount + 1;
+    setPressCount(newPressCount);
+
+    if (AsyncStorage.getItem('mod-dev') === 'false' && newPressCount === 10) {
+        setIsModalVisible2(true)
+    } else if (AsyncStorage.getItem('mod-dev') === 'true' && newPressCount === 10){
+      AsyncStorage.setItem('mod-dev', 'false');
+      Alert.alert('Modo de desarrollo desactivado');
+    }
+  }
+
+const handleDev = async ()=>{
+        if(validateFields()){
+          try {
+            setLoading(true)
+            const DataUser  = await LoginRequestDev(username,password);
+            const DataSuperUser = await LoginSuperUser(DataUser);
+            if (DataSuperUser){
+                console.log('Se Inicio Sesión como administrador con exitoso', DataUser);
+                Alert.alert('NOMBRE DEL USUARIO: ', DataUser.user_display_name);
+                setLoading(false)
+                AsyncStorage.setItem('mod-dev', 'true');
+                console.log('Cambiando a modo de desarrollo');
+                // navigation.navigate('AdminView')
+        } else{
+            console.log('No es administrador');
+            Alert.alert('No es administrador');
+            setLoading(false)
+          }
+          }
+          catch (err){
+            console.error('Error de inicio de sesión', err);
+          }
+    };
+    }
+
     return (
         <>
         <SafeAreaView >
             <View style={styles.contentImage} >
+            <Pressable onPress={handleLogoPress}>
             <Image
                 style={styles.imageLogo}
                 source={images[0].logo}
             />
+            </Pressable>
             </View>
             <View style={styles.contentText}>
               <Text style={styles.textTitle}>
@@ -106,6 +169,11 @@ const validateFields = () => {
                       {textButton}
                   </Pressable>
             </View>
+            <View style={styles.ContentTextSmall}>
+                <Pressable onPress={() => navigation.navigate('RecoverPasswordView')}>
+                  <Text style={styles.TextSmallPass}>¿Olvidaste tu contraseña?</Text>
+                </Pressable>
+            </View>
                   <View style={styles.ContainerLine}>
                       <View style={styles.line} />
                         <View style={styles.circle}>
@@ -123,10 +191,44 @@ const validateFields = () => {
                   <OpenURL url={LinkURl}>términos y políticas de privacidad</OpenURL>
                 </View>
             </SafeAreaView>
+            <ModalViewLogin
+                isVisible={isModalVisible1}
+                onClose={closeModal}
+                textTitle="Por Favor, complete todos los campos"
+                textButton="Cerrar"
+              />
+              <ModalViewDev
+                isVisible={isModalVisible2}
+                onClose={closeModal2}
+                textButton={textButton}
+                sendData={handleDev}
+              />
             </>
     )
 }
 const styles = StyleSheet.create({
+  centeredView: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 22,
+  },
+  modalView: {
+    margin: 20,
+    backgroundColor: "white",
+    borderRadius: 20,
+    paddingTop:10,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+        width: 0,
+        height: 2
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5
+},
+
     input: {
         height: 60,
         width:300,
@@ -174,6 +276,7 @@ const styles = StyleSheet.create({
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
+      marginTop: 20,
     },
     line:{
       height: 1,
@@ -196,12 +299,17 @@ const styles = StyleSheet.create({
       backgroundColor: 'white',
     },
     ContentTextSmall:{
-      margin:30,
       justifyContent: "center",
       alignItems: "center",
     },
     TextSmall:{
       textAlign:"center",
     },
+    TextSmallPass:{
+      color: 'blue',
+      textAlign:"center",
+      textDecorationLine: 'underline',
+    }
   });
+
 export default LoginForm

@@ -1,13 +1,13 @@
-import React, { useState } from "react";
-import { View, Text, SafeAreaView, StyleSheet, Image, TextInput, Alert, Pressable } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, SafeAreaView, StyleSheet, Image, TextInput, Pressable } from "react-native";
 import { RegisterRequest } from "../../service/wp_service";
-import { AntDesign } from '@expo/vector-icons'; 
+import { AntDesign } from '@expo/vector-icons';
+import  ModalView  from "./smart_components/Modals";
 
 const images = [
     { logo: require('../../assets/logotipo.png') },
     { background: require('../../assets/SALA-DE-ESPERA.jpg') },
 ];
-
 const RegisterForm = () => {
     const [formData, setFormData] = useState({
         user_login: '',
@@ -22,8 +22,8 @@ const RegisterForm = () => {
         profession_user: '',
         university_user: '',
     });
-    
-    const [currentStep, setCurrentStep] = useState(3);
+    const [currentStep, setCurrentStep] = useState(1);
+    const [isModalVisible, setIsModalVisible] = useState(false);
 
     const validateFields = () => {
         const requiredFields = {
@@ -31,26 +31,24 @@ const RegisterForm = () => {
             2: ['phone', 'address_user', 'university_user', 'profession_user'],
             3: ['user_pass'],
         };
-
-        const currentFields = requiredFields[currentStep];
-
-        if (currentFields.every(field => typeof formData[field] === 'string' && formData[field].trim() !== '')) {
-            console.log(formData);
-            return true;
-        } else {
-            console.log(formData)
-            Alert.alert('Por Favor, complete todos los campos');
-            return false
-        }
+            const currentFields = requiredFields[currentStep];
+            if(currentFields.every(field => typeof formData[field] === 'string' && formData[field].trim() !== '')) {
+                console.log(formData);
+                return true;
+            } else {
+                return false;
+            }
     };
     const handleNext = () => {
         if (validateFields()) {
             setCurrentStep(currentStep + 1);
+        } else {
+            setIsModalVisible(true);
         }
         if(currentStep === 3){
             try {
                 const DataRegister = RegisterRequest(formData);
-                console.log('Se Registro con existo', DataRegister);
+                console.log('Se Registro con éxito', DataRegister);
                 console.log(DataRegister);
             }
            catch (err){
@@ -58,6 +56,15 @@ const RegisterForm = () => {
             }
         }
     };
+    useEffect(() => {
+        if (isModalVisible) {
+            setIsModalVisible(true);
+        }
+    }, [isModalVisible]);
+
+    const closeModal = () => {
+        setIsModalVisible(false);
+      };
     const handlePrev = () => {
         setCurrentStep(currentStep - 1);
     };
@@ -127,8 +134,10 @@ const RegisterForm = () => {
         } else {
             return (
                 <>
-                <View styles={styles.contentInput}>
+                <View styles={styles.contentInput1}>
                 <TextInput
+                        password
+                        secureTextEntry={true}
                         style={styles.input}
                         placeholder="CONTRASEÑA"
                         value={formData.user_pass}
@@ -140,6 +149,7 @@ const RegisterForm = () => {
         }
     };
     return (
+        <>
         <SafeAreaView>
             <View style={styles.contentImage}>
                 <Image
@@ -148,7 +158,7 @@ const RegisterForm = () => {
                 />
             </View>
             <View style={styles.contentText}>
-                <Text style={styles.textTitle}>
+                <Text style={styles.text}>
                     CREA TU CUENTA
                     DATOS BÁSICOS.
                 </Text>
@@ -165,12 +175,24 @@ const RegisterForm = () => {
                     )}
                 <View style={styles.ButtonNext}>
                     <Pressable  onPress={handleNext}>
-                        {currentStep < 3 ? <AntDesign style={styles.button} name="rightcircle" size={60} color="#A168DE" /> : <Text style={styles.buttonLogin}>Enviar</Text>}
+                        {
+                        currentStep < 3 ? <AntDesign  name="rightcircle" size={60} color="#A168DE" /> : 
+                        <View style={styles.contentText}>
+                            <Text style={styles.buttonLogin}>Enviar</Text>
+                        </View>
+                        }
                     </Pressable>
                 </View>
                 </View>
             </View>
         </SafeAreaView>
+        <ModalView
+                isVisible={isModalVisible}
+                onClose={closeModal}
+                textTitle="Por Favor, complete todos los campos"r
+                textButton="Cerrar"
+                />
+        </>
     );
 };
 
@@ -188,16 +210,22 @@ const styles = StyleSheet.create({
         margin: 15,
         borderWidth: 2,
         borderRadius:10,
-        padding: 10,
+        padding: 20,
         shadowColor: "#000000",
     },
-    textTitle:{
+    text:{
         fontSize: 40,
         fontWeight: '500',
       },
       contentInput:{
         margin:30,
         alignItems: "center",
+      },
+      contentInput1:{
+        flex:1,
+        alignItems: "center",
+        justifyContent: "center",
+        borderColor: '#A168DE',
       },
       button: {
         height: 60,
