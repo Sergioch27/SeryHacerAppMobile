@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, SafeAreaView, StyleSheet, Image, TextInput, Pressable } from "react-native";
+import { View, Text, SafeAreaView, StyleSheet, Image, TextInput, Pressable } from "react-native"; // <-- Corregir esta línea
 import { RegisterRequest } from "../../service/wp_service";
 import { AntDesign } from '@expo/vector-icons';
-import  ModalView  from "./smart_components/Modals";
+import {ModalViewLogin} from "./smart_components/Modals";
 
 const images = [
     { logo: require('../../assets/logotipo.png') },
@@ -31,14 +31,16 @@ const RegisterForm = () => {
             2: ['phone', 'address_user', 'university_user', 'profession_user'],
             3: ['user_pass'],
         };
-            const currentFields = requiredFields[currentStep];
-            if(currentFields.every(field => typeof formData[field] === 'string' && formData[field].trim() !== '')) {
-                console.log(formData);
-                return true;
-            } else {
-                return false;
-            }
+    
+        const currentFields = requiredFields[currentStep];
+        if (currentFields.every(field => typeof formData[field] === 'string')) {
+            console.log(formData);
+            return true;
+        } else {
+            return false;
+        }
     };
+
     const handleNext = () => {
         if (validateFields()) {
             setCurrentStep(currentStep + 1);
@@ -186,7 +188,7 @@ const RegisterForm = () => {
                 </View>
             </View>
         </SafeAreaView>
-        <ModalView
+        <ModalViewLogin
                 isVisible={isModalVisible}
                 onClose={closeModal}
                 textTitle="Por Favor, complete todos los campos"r
