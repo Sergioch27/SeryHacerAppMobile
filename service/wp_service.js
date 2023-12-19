@@ -4,7 +4,7 @@ const API_BASE_URL_DEV = 'https://test.espacioseryhacer.com/wp-json/';
 const API_BASE_URL_PRO = 'https://www.espacioseryhacer.com/wp-json/';
 
 const ApiType = () => {
-    if( AsyncStorage.getItem('mod-dev')){
+    if( AsyncStorage.getItem('mod-dev') === 'true'){
         return API_BASE_URL_DEV
     }  else {
         return  API_BASE_URL_PRO

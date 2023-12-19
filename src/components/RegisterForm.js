@@ -31,16 +31,14 @@ const RegisterForm = () => {
             2: ['phone', 'address_user', 'university_user', 'profession_user'],
             3: ['user_pass'],
         };
-    
-        const currentFields = requiredFields[currentStep];
-        if (currentFields.every(field => typeof formData[field] === 'string')) {
-            console.log(formData);
-            return true;
-        } else {
-            return false;
-        }
+            const currentFields = requiredFields[currentStep];
+            if(currentFields.every(field => typeof formData[field] === 'string' && formData[field].trim() !== '')) {
+                console.log(formData);
+                return true;
+            } else {
+                return false;
+            }
     };
-
     const handleNext = () => {
         if (validateFields()) {
             setCurrentStep(currentStep + 1);

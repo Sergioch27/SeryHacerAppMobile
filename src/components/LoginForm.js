@@ -25,6 +25,8 @@ const LoginForm = ()=>{
   const [isModalVisible1, setIsModalVisible1] = useState(false);
   const [isModalVisible2, setIsModalVisible2] = useState(false);
   const [pressCount, setPressCount] = useState(0);
+  const [warningMessage, setWarningMessage] = useState('');
+
 
   const navigation = useNavigation();
 
@@ -48,6 +50,23 @@ const validateFields = () => {
         return false;
     }
 };
+const validateFieldsDev = () => {
+  console.log('username:', username);
+  console.log('password:', password);
+  if (username.trim() !== '' && password.trim() !== '') {
+    setWarningMessage('');
+    return true;
+  } else {
+    console.log('Campos vacíos');
+    setWarningMessage('Por favor, complete todos los campos.');
+    return false;
+  }
+};
+
+useEffect( async () => {
+  await AsyncStorage.setItem('mod-dev', 'false');
+}, []);
+
 useEffect(() => {
   if (isModalVisible1) {
       setIsModalVisible1(true);
@@ -98,20 +117,26 @@ const closeModal2 = () => {
   const handleLogoPress = async () => {
     const newPressCount = pressCount + 1;
     setPressCount(newPressCount);
-
-    if (AsyncStorage.getItem('mod-dev') === 'false' && newPressCount === 10) {
+console.log(newPressCount);
+    if (await AsyncStorage.getItem('mod-dev') === 'false' && newPressCount === 10) {
         setIsModalVisible2(true)
-    } else if (AsyncStorage.getItem('mod-dev') === 'true' && newPressCount === 10){
-      AsyncStorage.setItem('mod-dev', 'false');
-      Alert.alert('Modo de desarrollo desactivado');
+    } else if (await AsyncStorage.getItem('mod-dev') === 'true' && newPressCount === 10){
+      await AsyncStorage.setItem('mod-dev', 'false');
+      return (
+        Alert.alert('Modo de desarrollo desactivado')
+        
+      )
     }
   }
 
 const handleDev = async ()=>{
-        if(validateFields()){
+        if(validateFieldsDev()){
           try {
             setLoading(true)
+            console.log('usernameDev:', username);
+            console.log('pass', password);
             const DataUser  = await LoginRequestDev(username,password);
+            console.log('DataUser:', DataUser);
             const DataSuperUser = await LoginSuperUser(DataUser);
             if (DataSuperUser){
                 console.log('Se Inicio Sesión como administrador con exitoso', DataUser);
@@ -119,7 +144,6 @@ const handleDev = async ()=>{
                 setLoading(false)
                 AsyncStorage.setItem('mod-dev', 'true');
                 console.log('Cambiando a modo de desarrollo');
-                // navigation.navigate('AdminView')
         } else{
             console.log('No es administrador');
             Alert.alert('No es administrador');
@@ -129,7 +153,11 @@ const handleDev = async ()=>{
           catch (err){
             console.error('Error de inicio de sesión', err);
           }
-    };
+          finally {
+            setLoading(false)
+            setPressCount(0);
+          }
+    }
     }
 
     return (
@@ -202,6 +230,9 @@ const handleDev = async ()=>{
                 onClose={closeModal2}
                 textButton={textButton}
                 sendData={handleDev}
+                warningMessage={warningMessage}
+                setUsernameDevCallback={setUsername} 
+                setPasswordDevCallback={setPassword}
               />
             </>
     )

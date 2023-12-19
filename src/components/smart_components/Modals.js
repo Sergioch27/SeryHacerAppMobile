@@ -9,7 +9,8 @@ const ModalViewLogin = ({isVisible,onClose,textTitle,textButton}) => {
             animationType="slide"
             transparent={true}
             visible={isVisible}
-            onRequestClose={onClose}>
+            onRequestClose={onClose}
+            style={styles.ZIndex}>
             <View style={styles.centeredView}>
                 <View style={styles.modalView}>
                     <Text style={styles.modalText}>{textTitle}</Text>
@@ -24,9 +25,7 @@ const ModalViewLogin = ({isVisible,onClose,textTitle,textButton}) => {
     );
 }
 
-const ModalViewDev = ({isVisible,onClose,textTitle,textButton, sendData}) => {
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
+const ModalViewDev = ({isVisible,onClose,textTitle,textButton, sendData, warningMessage,username,password,setUsernameDevCallback,setPasswordDevCallback}) => {
 
     return (
         <View style={styles.contentInput}>
@@ -47,17 +46,18 @@ const ModalViewDev = ({isVisible,onClose,textTitle,textButton, sendData}) => {
         email
         placeholder={'USUARIO'}
         value={username}
-        onChangeText={setUsername}
+        onChangeText={(text) => {setUsernameDevCallback(text);}}
     />
     <LoginInput
     style={styles.input}
             password
             placeholder={'CONTRASEÑA'}
             value={password}
-            onChangeText={setPassword}
+            onChangeText= {(text) => {setPasswordDevCallback(text);}}
             secureTextEntry={true}
     />
           <Pressable  style={styles.buttonLogin}  onPress={sendData}>{textButton}</Pressable>
+          {warningMessage ? <Text style={styles.warningText}>{warningMessage}</Text> : null}
     </View>
             </View>
           </View>
@@ -66,6 +66,9 @@ const ModalViewDev = ({isVisible,onClose,textTitle,textButton, sendData}) => {
     );
 }
 const styles = StyleSheet.create({
+    ZIndex:{
+        zIndex: 1000,
+    },
     centeredView: {
         flex: 1,
         justifyContent: "center",
