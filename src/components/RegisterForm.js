@@ -189,7 +189,7 @@ const RegisterForm = () => {
         <ModalViewLogin
                 isVisible={isModalVisible}
                 onClose={closeModal}
-                textTitle="Por Favor, complete todos los campos"r
+                textTitle="Por Favor, complete todos los campos"
                 textButton="Cerrar"
                 />
         </>

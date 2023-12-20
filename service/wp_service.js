@@ -74,8 +74,10 @@ const RegisterRequest = async (formData)=>{
 
 const RecoverPassword = async (email)=>{
     try {
-        const DataRecover = await axios.post( ApiType() + 'wp/v2/users/lostpassword', {
-            user_login: email
+        console.log(ApiType())
+        console.log(email);
+        const DataRecover = await axios.post( ApiType() + 'bdpwr/v1/reset-password', {
+            email
         });
         return DataRecover.data;
     }
@@ -84,5 +86,34 @@ const RecoverPassword = async (email)=>{
         throw err;
     }
 }
+const validateCode = async (code, email)=>{
+    try {
+        const DataCode = await axios.post( ApiType() + 'bdpwr/v1/validate-code', {
+            email,
+            code
+        });
+        return DataCode.data;
+    }
+    catch (err){
+        console.error('Error de validación de código', err);
+        throw err;
+    }
+}
 
-export {LoginOutUser, LoginRequest, RegisterRequest, RecoverPassword, LoginRequestDev, LoginSuperUser}
+const passwordRecover = async (email,code,password)=>{
+    try {
+        const DataRecover = await axios.post( ApiType() + 'bdpwr/v1/reset-password', {
+            email,
+            code,
+            password
+        });
+        return DataRecover.data;
+    }
+    catch (err){
+        console.error('Error de recuperación de contraseña', err);
+        throw err;
+    }
+
+}
+
+export {LoginOutUser, LoginRequest, RegisterRequest, RecoverPassword, LoginRequestDev, LoginSuperUser, validateCode, passwordRecover}
