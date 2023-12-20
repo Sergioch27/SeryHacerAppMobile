@@ -36,7 +36,7 @@ const LoginSuperUser = async (token) => {
         return DataSuperUser.data.is_super_admin;
     }
     catch (error) {
-        console.error('error de inicio sesion como administrador');
+        console.error('error de inicio sesión como administrador');
         throw error
     }
 }

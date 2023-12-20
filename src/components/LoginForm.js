@@ -10,17 +10,19 @@ import {
   Pressable,
   SafeAreaView,
   Button,
-  Linking,
-  Modal
+  Linking
 } from "react-native";
-import { LoginRequest, LoginOutUser, LoginRequestDev, LoginSuperUser } from "../../service/wp_service";
-import Loading from "../components/smart_components/Loading";
+import { LoginRequest, LoginRequestDev, LoginSuperUser } from "../../service/wp_service";
+import Loading from "./smart_components/Loading";
 import {ModalViewLogin, ModalViewDev} from "./smart_components/Modals";
 import AsyncStorage from "@react-native-async-storage/async-storage"
 
 const LoginForm = ()=>{
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [usernameDev, setUsernameDev] = useState('');
+  const [passwordDev, setPasswordDev] = useState('');
+
   const [loading, setLoading] = useState(false);
   const [isModalVisible1, setIsModalVisible1] = useState(false);
   const [isModalVisible2, setIsModalVisible2] = useState(false);
@@ -51,9 +53,9 @@ const validateFields = () => {
     }
 };
 const validateFieldsDev = () => {
-  console.log('username:', username);
-  console.log('password:', password);
-  if (username.trim() !== '' && password.trim() !== '') {
+  console.log('username:', usernameDev);
+  console.log('password:', passwordDev);
+  if (usernameDev.trim() !== '' && passwordDev.trim() !== '') {
     setWarningMessage('');
     return true;
   } else {
@@ -63,15 +65,15 @@ const validateFieldsDev = () => {
   }
 };
 
-useEffect( async () => {
-  await AsyncStorage.setItem('mod-dev', 'false');
+useEffect( () => {
+  AsyncStorage.setItem('mod-dev', 'false');
 }, []);
 
 useEffect(() => {
   if (isModalVisible1) {
-      setIsModalVisible1(true);
+      setIsModalVisible1(true)
   }
-}, [isModalVisible1]);
+}, [isModalVisible1])
 
 const closeModal = () => {
   setIsModalVisible1(false);
@@ -85,6 +87,7 @@ useEffect(() => {
 
 const closeModal2 = () => {
   setIsModalVisible2(false);
+  setPressCount(0);
 };
 
   const images = [
@@ -95,7 +98,7 @@ const closeModal2 = () => {
     if (loading){
       return <Loading></Loading>
     }else {
-      return <Text style={styles.textPressable}>INICIAR SESIÓN</Text>
+      return <Text style={styles.textPressable} > INICIAR SESIÓN </Text>
     }
   }
   const handleLogin = async ()=>{
@@ -117,15 +120,19 @@ const closeModal2 = () => {
   const handleLogoPress = async () => {
     const newPressCount = pressCount + 1;
     setPressCount(newPressCount);
-console.log(newPressCount);
-    if (await AsyncStorage.getItem('mod-dev') === 'false' && newPressCount === 10) {
-        setIsModalVisible2(true)
-    } else if (await AsyncStorage.getItem('mod-dev') === 'true' && newPressCount === 10){
-      await AsyncStorage.setItem('mod-dev', 'false');
-      return (
-        Alert.alert('Modo de desarrollo desactivado')
-        
-      )
+    console.log(newPressCount);
+    if (newPressCount === 10){
+      switch (await AsyncStorage.getItem('mod-dev')) {
+        case 'false':
+          setIsModalVisible2(true)
+          setPressCount(0);
+          break;
+        case 'true':
+          await AsyncStorage.setItem('mod-dev', 'false');
+          setPressCount(0);
+          Alert.alert('Modo de desarrollo desactivado');
+          break;
+      }
     }
   }
 
@@ -133,19 +140,16 @@ const handleDev = async ()=>{
         if(validateFieldsDev()){
           try {
             setLoading(true)
-            console.log('usernameDev:', username);
-            console.log('pass', password);
-            const DataUser  = await LoginRequestDev(username,password);
-            console.log('DataUser:', DataUser);
+            const DataUser  = await LoginRequestDev(usernameDev,passwordDev);
             const DataSuperUser = await LoginSuperUser(DataUser);
             if (DataSuperUser){
                 console.log('Se Inicio Sesión como administrador con exitoso', DataUser);
                 Alert.alert('NOMBRE DEL USUARIO: ', DataUser.user_display_name);
                 setLoading(false)
                 AsyncStorage.setItem('mod-dev', 'true');
+                closeModal2();
                 console.log('Cambiando a modo de desarrollo');
         } else{
-            console.log('No es administrador');
             Alert.alert('No es administrador');
             setLoading(false)
           }
@@ -231,8 +235,8 @@ const handleDev = async ()=>{
                 textButton={textButton}
                 sendData={handleDev}
                 warningMessage={warningMessage}
-                setUsernameDevCallback={setUsername} 
-                setPasswordDevCallback={setPassword}
+                setUsernameDevCallback={setUsernameDev} 
+                setPasswordDevCallback={setPasswordDev}
               />
             </>
     )

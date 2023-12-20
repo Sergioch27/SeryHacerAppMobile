@@ -43,21 +43,21 @@ const ModalViewDev = ({isVisible,onClose,textTitle,textButton, sendData, warning
               <View style={styles.contentInput}>
     <LoginInput
     style={styles.input}
-        email
         placeholder={'USUARIO'}
+        placeholderTextColor={'#888'}
         value={username}
         onChangeText={(text) => {setUsernameDevCallback(text);}}
     />
     <LoginInput
     style={styles.input}
-            password
             placeholder={'CONTRASEÑA'}
+            placeholderTextColor={'#888'}
             value={password}
             onChangeText= {(text) => {setPasswordDevCallback(text);}}
             secureTextEntry={true}
     />
           <Pressable  style={styles.buttonLogin}  onPress={sendData}>{textButton}</Pressable>
-          {warningMessage ? <Text style={styles.warningText}>{warningMessage}</Text> : null}
+          {warningMessage ? <Text>{warningMessage}</Text> : null}
     </View>
             </View>
           </View>
