@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LoginView from '../src/screens/LoginView';
 import RegisterView from '../src/screens/RegisterView';
 import RecoverPasswordView from '../src/screens/RecoverPasswordView';
+import ProductView from '../src/screens/ProductView';
 
 const Stack = createNativeStackNavigator();
 
@@ -26,6 +27,11 @@ const Navigator = () => {
                     name="RecoverPasswordView"
                     options={{ headerShown: false }}
                     component={RecoverPasswordView}
+                />
+                <Stack.Screen
+                    name="ProductView"
+                    options={{ headerShown: false }}
+                    component={ProductView}
                 />
             </Stack.Navigator>
         </NavigationContainer>

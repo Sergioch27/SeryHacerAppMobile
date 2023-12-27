@@ -24,6 +24,7 @@ const LoginForm = ()=>{
   const [passwordDev, setPasswordDev] = useState('');
 
   const [loading, setLoading] = useState(false);
+  const [clicked, setClicked] = useState(false);
   const [isModalVisible1, setIsModalVisible1] = useState(false);
   const [isModalVisible2, setIsModalVisible2] = useState(false);
   const [pressCount, setPressCount] = useState(0);
@@ -101,13 +102,15 @@ const closeModal2 = () => {
       return <Text style={styles.textPressable} > INICIAR SESIÓN </Text>
     }
   }
+
   const handleLogin = async ()=>{
     if(validateFields()){
+      console.log('username:', username);
         try {
             setLoading(true)
             const DataUser  = await LoginRequest(username,password);
-            console.log('Se Inicio Sesión con existo', DataUser);
-            Alert.alert('NOMBRE DEL USUARIO: ', DataUser.user_display_name);
+            navigation.navigate('ProductView');
+            return DataUser;
           }
           catch (err){
             console.error('Error de inicio de sesión', err);
@@ -117,6 +120,7 @@ const closeModal2 = () => {
         }
         }
   }
+
   const handleLogoPress = async () => {
     const newPressCount = pressCount + 1;
     setPressCount(newPressCount);
@@ -139,7 +143,7 @@ const closeModal2 = () => {
 const handleDev = async ()=>{
         if(validateFieldsDev()){
           try {
-            setLoading(true)
+            setClicked(true);
             const DataUser  = await LoginRequestDev(usernameDev,passwordDev);
             const DataSuperUser = await LoginSuperUser(DataUser);
             if (DataSuperUser){
@@ -197,8 +201,8 @@ const handleDev = async ()=>{
                     onChangeText={setPassword}
                     secureTextEntry={true}
             />
-                  <Pressable  style={styles.buttonLogin}  onPress={handleLogin}>
-                      {textButton}
+                  <Pressable style={styles.buttonLogin}  onPress={handleLogin}>
+                        {textButton}
                   </Pressable>
             </View>
             <View style={styles.ContentTextSmall}>
@@ -232,7 +236,7 @@ const handleDev = async ()=>{
               <ModalViewDev
                 isVisible={isModalVisible2}
                 onClose={closeModal2}
-                textButton={textButton}
+                textButton={clicked ? <Loading></Loading> : <Text style={styles.textPressable}> INICIAR SESIÓN </Text>}
                 sendData={handleDev}
                 warningMessage={warningMessage}
                 setUsernameDevCallback={setUsernameDev} 

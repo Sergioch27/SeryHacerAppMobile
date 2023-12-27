@@ -18,7 +18,6 @@ const RecoveryForm = () => {
   const input3Ref = useRef(null);
   const input4Ref = useRef(null);
 
-  const [code, setCode] = useState('');
 
   const closeModal = () => {
     setIsModalVisible(false);
@@ -74,17 +73,15 @@ const RecoveryForm = () => {
       )
     }
   }
-const handleRecoverEmail = () => {
+const handleRecoverEmail = async () => {
   if(validateFields()){
     console.log(form.email)
     try {
     setLoading(true);
-    const DataRecover = RecoverPassword(form.email);
-    if(DataRecover.data.status === 200){
-      setCurrentStep(currentStep + 1);
-    }
+    const DataRecover = await RecoverPassword(form.email);
+    setCurrentStep(currentStep + 1);
     console.log('Se envió con éxito', DataRecover);
-    console.log(DataRecover.data.message);
+    console.log(DataRecover.message);
   } catch (err) {
     console.error('Error de envió', err);
   }
@@ -100,9 +97,16 @@ const handleRecoverEmail = () => {
 const handleRecoverCode = () => {
   if(validateFields()){
     const fullCode = `${input1Ref.current.value}${input2Ref.current.value}${input3Ref.current.value}${input4Ref.current.value}`;
+    console.log(fullCode)
     try {
       setLoading(true);
-    const DataRecover = validateCode(fullCode);
+      const email = form.email;
+      const code = {
+        code: fullCode,
+        email: email,
+        password: "",
+      };
+    const DataRecover = validateCode( email, fullCode);
     console.log('Se envió con éxito', DataRecover);
     console.log(DataRecover.message);
       setCurrentStep(currentStep + 1);
@@ -122,7 +126,7 @@ const handleRecoverPassword = () => {
   if (validateFields()) {
     try {
       setLoading(true);
-      const DataRecover = passwordRecover(email, fullCode, password);
+      const DataRecover = passwordRecover(email, code, password);
       console.log('Se envió con éxito', DataRecover);
       console.log(DataRecover.message);
       setCurrentStep(currentStep + 1);
