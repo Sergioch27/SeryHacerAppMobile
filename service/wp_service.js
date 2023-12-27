@@ -120,11 +120,12 @@ const GetProducts = async (ids)=>{
     for (const id of ids) {
         try {
             const token = await AsyncStorage.getItem('user_token');
-            const DataProducts = await axios.get( ApiType() + 'wc/v3/products/' + `${id}`, {
+            const DataProducts = await axios.get( await ApiType() + 'wc/v3/products/' + `${id}`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
             });
+            console.log(token);
             productDetails.push(DataProducts.data);
         }
         catch (err){
