@@ -1,10 +1,11 @@
 import { StyleSheet, Text, SafeAreaView } from 'react-native'
 import React from 'react'
+import OrderList from '../components/OrderList'
 
 const OrderView = () => {
   return (
     <SafeAreaView>
-      <Text>OrderView</Text>
+      <OrderList />
     </SafeAreaView>
   )
 }

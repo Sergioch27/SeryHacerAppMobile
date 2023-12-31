@@ -1,5 +1,6 @@
 import axios from "axios"
 import AsyncStorage from "@react-native-async-storage/async-storage"
+
 const API_BASE_URL_DEV = 'https://test.espacioseryhacer.com/wp-json/';
 const API_BASE_URL_PRO = 'https://www.espacioseryhacer.com/wp-json/';
 
@@ -146,4 +147,20 @@ const GetProducts = async (ids)=>{
     console.log(productDetails);
     return productDetails;
 };
-export {LoginOutUser, LoginRequest, RegisterRequest, RecoverPassword, LoginRequestDev, LoginSuperUser, validateCode, passwordRecover, GetProducts}
+
+const GetOder = async ()=>{
+    try {
+        const token = await AsyncStorage.getItem('user_token');
+        const DataOder = await axios.get( await ApiType() + 'wc/v3/orders', {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+        return DataOder.data;
+    }
+    catch (err){
+        console.error('Error de recuperación de ordenes', err);
+        throw err;
+    } 
+};
+export {LoginOutUser, LoginRequest, RegisterRequest, RecoverPassword, LoginRequestDev, LoginSuperUser, validateCode, passwordRecover, GetProducts,GetOder}
