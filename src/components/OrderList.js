@@ -8,7 +8,7 @@ import { AntDesign } from '@expo/vector-icons';
 const OrderList = () => {
     const [orderData, setOrderData] = useState([]);
     const [loading, setLoading] = useState(false);
-
+    const [page, setPage] = useState(1);
     const images = [
         { logo: require('../../assets/logotipo.png') },
         { background: require('../../assets/SALA-DE-ESPERA.jpg') },
@@ -19,8 +19,7 @@ const OrderList = () => {
           const GetOderUser = async () => {
             try {
               setLoading(true);
-              setOrderData([]);
-              const Data = await GetOder();
+              const Data = await GetOder(page);
               setOrderData(Data);
               console.log('Ordenes', Data);
             } catch (err) {
@@ -32,7 +31,7 @@ const OrderList = () => {
           };
     
           GetOderUser();
-        }, []) 
+        }, [page]) 
       );
     const LoadView = () => {
         if (loading){
@@ -45,6 +44,9 @@ const OrderList = () => {
             </>
           )
         }
+      }
+      const loadMoreOrders = () => {
+        setPage(page + 1);
       }
       const LoginOut = async () => {
         const navigation = useNavigation();
@@ -89,6 +91,8 @@ const OrderList = () => {
             
             )}
             keyExtractor={(item) => item.id.toString()}
+            // ListFooterComponent={<Loading />}
+            // onEndReached={loadMoreOrders}
         />
     </View>
   )

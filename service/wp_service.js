@@ -148,10 +148,10 @@ const GetProducts = async (ids)=>{
     return productDetails;
 };
 
-const GetOder = async ()=>{
+const GetOder = async (page)=>{
     try {
         const token = await AsyncStorage.getItem('user_token');
-        const DataOder = await axios.get( await ApiType() + 'wc/v3/orders', {
+        const DataOder = await axios.get( await ApiType() + 'wc/v3/orders' + `?page=${page}`, {
             headers: {
                 Authorization: `Bearer ${token}`
             }
@@ -161,6 +161,6 @@ const GetOder = async ()=>{
     catch (err){
         console.error('Error de recuperación de ordenes', err);
         throw err;
-    } 
+    }
 };
 export {LoginOutUser, LoginRequest, RegisterRequest, RecoverPassword, LoginRequestDev, LoginSuperUser, validateCode, passwordRecover, GetProducts,GetOder}
