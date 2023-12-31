@@ -2,7 +2,6 @@ import React,  {useState} from "react";
 import { Modal, Pressable, Text, View, StyleSheet } from "react-native";
 import LoginInput from "./LoginInput";
 import { AntDesign } from '@expo/vector-icons';
-import Loading from "./Loading";
 
 const ModalViewLogin = ({isVisible,onClose,textTitle,textButton}) => {
     return (

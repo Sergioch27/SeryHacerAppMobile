@@ -63,7 +63,9 @@ const LoginRequest = async (username,password)=>{
 
 const LoginOutUser = async()=>{
     await AsyncStorage.removeItem('user_token');
+    return true;
 }
+
 const RegisterRequest = async (formData)=>{
     try {
         const DataRegister = await axios.post( ApiType + 'app/v1/register', formData);
@@ -117,9 +119,17 @@ const passwordRecover = async (form)=>{
 
 const GetProducts = async (ids)=>{
     const productDetails = []
-    for (const id of ids) {
+    console.log(ids);
+    for (const id of ids[0].products[0].ids) {
         try {
+            // const token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL3Rlc3QuZXNwYWNpb3NlcnloYWNlci5jb20iLCJpYXQiOjE3MDM4MTczODgsIm5iZiI6MTcwMzgxNzM4OCwiZXhwIjoxNzA0NDIyMTg4LCJkYXRhIjp7InVzZXIiOnsiaWQiOiIyOCJ9fX0.kJk8tqv4QFk8xdS3KqWK1_TpuV-6gpB3_hD9O-nDLxY'
             const token = await AsyncStorage.getItem('user_token');
+            console.log(id);
+            // const DataProducts = await axios.get( API_BASE_URL_DEV + 'wc/v3/products/' + `${id}`, {
+            //     headers: {
+            //         Authorization: `Bearer ${token}`
+            //     }
+            // });
             const DataProducts = await axios.get( await ApiType() + 'wc/v3/products/' + `${id}`, {
                 headers: {
                     Authorization: `Bearer ${token}`
@@ -133,6 +143,7 @@ const GetProducts = async (ids)=>{
             throw err;
         }
     }
+    console.log(productDetails);
     return productDetails;
 };
 export {LoginOutUser, LoginRequest, RegisterRequest, RecoverPassword, LoginRequestDev, LoginSuperUser, validateCode, passwordRecover, GetProducts}

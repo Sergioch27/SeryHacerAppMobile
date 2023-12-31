@@ -16,6 +16,10 @@ import { LoginRequest, LoginRequestDev, LoginSuperUser } from "../../service/wp_
 import Loading from "./smart_components/Loading";
 import {ModalViewLogin, ModalViewDev} from "./smart_components/Modals";
 import AsyncStorage from "@react-native-async-storage/async-storage"
+import { useSelector, useDispatch } from "react-redux";
+import { setModal1, setModal2 } from "../features/modal/modalSlice";
+
+
 
 const LoginForm = ()=>{
   const [username, setUsername] = useState('');
@@ -25,11 +29,12 @@ const LoginForm = ()=>{
 
   const [loading, setLoading] = useState(false);
   const [clicked, setClicked] = useState(false);
-  const [isModalVisible1, setIsModalVisible1] = useState(false);
-  const [isModalVisible2, setIsModalVisible2] = useState(false);
   const [pressCount, setPressCount] = useState(0);
   const [warningMessage, setWarningMessage] = useState('');
 
+  const dispatch = useDispatch();
+  const isModalVisible1 = useSelector((state) => state.modal.modal1.isOpen);
+  const isModalVisible2 = useSelector((state) => state.modal.modal2.isOpen);
 
   const navigation = useNavigation();
 
@@ -45,11 +50,12 @@ const OpenURL = ({url, children}) =>{
     }
   },[url]);
   return <Button title={children} onPress={handlePress} />;}
+
 const validateFields = () => {
     if (username.trim() !== '' && password.trim() !== '') {
         return true;
     } else {
-      setIsModalVisible1(true);
+      dispatch(setModal1(true))
         return false;
     }
 };
@@ -72,22 +78,22 @@ useEffect( () => {
 
 useEffect(() => {
   if (isModalVisible1) {
-      setIsModalVisible1(true)
+      dispatch(setModal1(true))
   }
 }, [isModalVisible1])
 
 const closeModal = () => {
-  setIsModalVisible1(false);
+  dispatch(setModal1(false))
 };
 
-useEffect(() => {
-  if (isModalVisible2) {
-      setIsModalVisible2(true);
+ useEffect(() => {
+if (isModalVisible2) {
+    dispatch(setModal2(true));
   }
 }, [isModalVisible2]);
 
 const closeModal2 = () => {
-  setIsModalVisible2(false);
+  dispatch(setModal2(false));
   setPressCount(0);
 };
 
@@ -109,7 +115,7 @@ const closeModal2 = () => {
         try {
             setLoading(true)
             const DataUser  = await LoginRequest(username,password);
-            navigation.navigate('ProductView');
+            navigation.navigate('ShopTab');
             return DataUser;
           }
           catch (err){
@@ -128,7 +134,7 @@ const closeModal2 = () => {
     if (newPressCount === 10){
       switch (await AsyncStorage.getItem('mod-dev')) {
         case 'false':
-          setIsModalVisible2(true)
+          dispatch(setModal2(true));
           setPressCount(0);
           break;
         case 'true':

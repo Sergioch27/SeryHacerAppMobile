@@ -3,6 +3,9 @@ import { View, Text, SafeAreaView, StyleSheet, Image, TextInput, Pressable } fro
 import { RegisterRequest } from "../../service/wp_service";
 import { AntDesign } from '@expo/vector-icons';
 import {ModalViewLogin} from "./smart_components/Modals";
+import { useSelector, useDispatch } from "react-redux";
+import { setModal1 } from "../features/modal/modalSlice";
+
 
 const images = [
     { logo: require('../../assets/logotipo.png') },
@@ -23,7 +26,11 @@ const RegisterForm = () => {
         university_user: '',
     });
     const [currentStep, setCurrentStep] = useState(1);
-    const [isModalVisible, setIsModalVisible] = useState(false);
+
+    const dispatch = useDispatch();
+
+    const isModalVisible = useSelector((state) => state.modal.modal1.isOpen);
+
 
     const validateFields = () => {
         const requiredFields = {
@@ -43,7 +50,7 @@ const RegisterForm = () => {
         if (validateFields()) {
             setCurrentStep(currentStep + 1);
         } else {
-            setIsModalVisible(true);
+            dispatch(setModal1(true));
         }
         if(currentStep === 3){
             try {
@@ -58,12 +65,12 @@ const RegisterForm = () => {
     };
     useEffect(() => {
         if (isModalVisible) {
-            setIsModalVisible(true);
+            dispatch(setModal1(true));
         }
     }, [isModalVisible]);
 
     const closeModal = () => {
-        setIsModalVisible(false);
+        dispatch(setModal1(false));
       };
     const handlePrev = () => {
         setCurrentStep(currentStep - 1);
