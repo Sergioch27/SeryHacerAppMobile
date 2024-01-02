@@ -11,7 +11,7 @@ const Stack = createNativeStackNavigator();
 const HomeStack = () => {
     return (
             <Stack.Navigator
-                // initialRouteName='ShopTab'
+                initialRouteName='ShopTab'
             >
                 <Stack.Screen
                     name="LoginView"
