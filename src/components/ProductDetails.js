@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native'
+import { StyleSheet, View, Text } from 'react-native'
 import React, { useEffect } from 'react'
 import Calendar from '../../class/Calendar'
 
@@ -12,6 +12,7 @@ const ProductDetails = () => {
 
     return (
         <View>
+            <Text>ProductDetails</Text>
         </View>
     )
 }
