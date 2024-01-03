@@ -67,6 +67,40 @@ const ModalViewDev = ({isVisible,onClose,textTitle,textButton, sendData, warning
       </View>
     );
 }
+
+const ModalLoginOut = ({isVisible,onClose,textTitle,textButton1, textButton2,onLoginOut}) => {
+    return (
+        <Modal
+            animationType="slide"
+            transparent={true}
+            visible={isVisible}
+            onRequestClose={onClose}
+            style={styles.ZIndex}>
+            <View style={styles.centeredView}>
+                <View style={styles.modalView}>
+                <Pressable onPress={onClose}>
+                    <AntDesign style={styles.closeButton} name="closecircle" size={20} color="#A168DE" />
+                </Pressable>
+                    <Text style={styles.modalText}>{textTitle}</Text>
+                    <View style={styles.ZoneButton}>
+                        <Pressable
+                            style={[styles.button, styles.buttonOut]}
+                            onPress={onLoginOut}
+                            >
+                            <Text style={styles.textStyle}>{textButton1}</Text>
+                        </Pressable>
+                        <Pressable
+                            style={[styles.button, styles.buttonClose]}
+                            onPress={onClose}
+                            >
+                            <Text style={styles.textStyle}>{textButton2}</Text>
+                        </Pressable>
+                    </View>
+                </View>
+            </View>
+        </Modal>
+    );
+}
 const styles = StyleSheet.create({
     ZIndex:{
         zIndex: 1000,
@@ -99,6 +133,10 @@ const styles = StyleSheet.create({
     },
     buttonClose: {
         backgroundColor: "#A168DE",
+    },
+    buttonOut: {
+        backgroundColor: "#A168DE",
+        marginRight: 10,
     },
     textStyle: {
         color: "white",
@@ -133,6 +171,9 @@ const styles = StyleSheet.create({
         borderRadius:15,
         backgroundColor: '#A168DE',
       },
+      ZoneButton:{
+        flexDirection: 'row',
+      }
 });
 
-export {ModalViewLogin, ModalViewDev};
+export {ModalViewLogin, ModalViewDev, ModalLoginOut};

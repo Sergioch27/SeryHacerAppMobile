@@ -75,7 +75,6 @@ const validateFieldsDev = () => {
 useEffect( () => {
   AsyncStorage.setItem('mod-dev', 'false');
 }, []);
-
 useEffect(() => {
   if (isModalVisible1) {
       dispatch(setModal1(true))
@@ -123,6 +122,8 @@ const closeModal2 = () => {
           }
           finally{
             setLoading(false)
+            setPassword('');
+            setUsername('');
         }
         }
   }

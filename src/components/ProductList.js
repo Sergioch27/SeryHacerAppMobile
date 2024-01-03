@@ -1,20 +1,15 @@
 import React, {useEffect, useState } from 'react';
 import { Pressable, SafeAreaView, Text, View, StyleSheet, Image, FlatList} from "react-native";
-import { GetProducts, LoginOutUser } from "../../service/wp_service";
+import { GetProducts} from "../../service/wp_service";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ProductsIds from "../../service/dataIds/ProductsIds.json";
 import Loading from '../components/smart_components/Loading';
-import { AntDesign } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import  Header  from '../components/smart_components/Header';
 
 const ProductsList  =  () => {
     const [productData, setProductData] = useState([]);
     const [loading, setLoading] = useState(false);
 
-    const images = [
-        { logo: require('../../assets/logotipo.png') },
-        { background: require('../../assets/SALA-DE-ESPERA.jpg') },
-      ];
       const LoadView = () => {
         if (loading){
 
@@ -51,20 +46,6 @@ const ProductsList  =  () => {
         GetProductsIds();
     }, [])
 
-    const LoginOut = async () => {
-      const navigation = useNavigation();
-      try {
-        const logout =  await LoginOutUser();
-        if (logout === true)
-        {
-          console.log(await AsyncStorage.getItem('user_token'));
-          navigation.navigate('Shoptab');
-          }
-      } catch (err) {
-        console.error('Error de cierre de sesión', err);
-        throw err;
-      }
-    };
 
     const ProductCard = ({ id, name, image }) => {
         return (
@@ -83,20 +64,7 @@ const ProductsList  =  () => {
           return (
         <>
             <SafeAreaView>
-            <View style={styles.contentImage} >
-            <Pressable onPress={LoginOut}>
-              <View style={styles.LoginOutUser}>
-              <AntDesign name="logout" size={24} color="#A168DE" />
-                <Text style={styles.textIcon}>
-                  SALIR
-                </Text>
-              </View>
-            </Pressable>
-            <Image
-                style={styles.imageLogo}
-                source={images[0].logo}
-            />
-            </View>
+              <Header />
             {/* <View style={styles.contentText}>
                 <Text style={styles.text}>
                     RESERVA DE BOX
@@ -121,20 +89,9 @@ const ProductsList  =  () => {
     )
 }
 const styles = StyleSheet.create({
-  contentImage: {
-    alignItems: "center",
-    height: 100,
-    marginTop: 50,
-  },
-      imageLogo:{
-        bottom: 60,
-        width:300,
-        height:110,
-      },
       contentList: {
         backgroundColor: 'transparent',
         height: 658,
-
       },
       contentText:{
         justifyContent: "center",
@@ -161,19 +118,6 @@ const styles = StyleSheet.create({
         },
         loading:{
             marginTop: 200,
-        },
-        textIcon:{
-          marginTop: 5,
-          fontSize: 10,
-          fontWeight: '500',
-          color: '#A168DE',
-        },
-        LoginOutUser:{
-          width: 50,
-          alignItems: "center",
-          alignSelf: 'flex-end',
-          marginLeft: 320,
-          bottom: 30,
         },
 });
 

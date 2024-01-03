@@ -3,16 +3,11 @@ import React, {useState, useEffect, useCallback } from 'react'
 import { useFocusEffect } from '@react-navigation/native';
 import { GetOder } from '../../service/wp_service'
 import Loading from './smart_components/Loading'
-import { AntDesign } from '@expo/vector-icons';
-
+import Header from './smart_components/Header'
 const OrderList = () => {
     const [orderData, setOrderData] = useState([]);
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);
-    const images = [
-        { logo: require('../../assets/logotipo.png') },
-        { background: require('../../assets/SALA-DE-ESPERA.jpg') },
-      ];
 
       useEffect(() => {
         const GetOderUser = async () => {
@@ -79,37 +74,11 @@ const OrderList = () => {
       const loadMoreOrders = () => {
         setPage(page + 1);
       }
-      const LoginOut = async () => {
-        const navigation = useNavigation();
-        try {
-          const logout =  await LoginOutUser();
-          if (logout === true)
-          {
-            console.log(await AsyncStorage.getItem('user_token'));
-            navigation.navigate('Shoptab');
-            }
-        } catch (err) {
-          console.error('Error de cierre de sesión', err);
-          throw err;
-        }
-      };
-  
+
   return (
+    <>
     <View>
-       <View style={styles.contentImage} >
-            <Pressable onPress={LoginOut}>
-              <View style={styles.LoginOutUser}>
-              <AntDesign name="logout" size={24} color="#A168DE" />
-                <Text style={styles.textIcon}>
-                  SALIR
-                </Text>
-              </View>
-            </Pressable>
-            <Image
-                style={styles.imageLogo}
-                source={images[0].logo}
-            />
-            </View>
+        <Header />
         <View style={styles.ContentList}>
         {LoadView()}
         <FlatList
@@ -126,35 +95,14 @@ const OrderList = () => {
         />
         </View>
     </View>
+    </>
+    
   )
 }
 const styles = StyleSheet.create({
     loading:{
         marginTop: 200,
     },
-    contentImage: {
-        alignItems: "center",
-        height: 100,
-        marginTop: 50,
-      },
-          imageLogo:{
-            bottom: 60,
-            width:300,
-            height:110,
-          },
-          textIcon:{
-            marginTop: 5,
-            fontSize: 10,
-            fontWeight: '500',
-            color: '#A168DE',
-          },
-          LoginOutUser:{
-            width: 50,
-            alignItems: "center",
-            alignSelf: 'flex-end',
-            marginLeft: 320,
-            bottom: 30,
-          },
           cardContent:{
             marginLeft: 30,
             marginRight: 30,
