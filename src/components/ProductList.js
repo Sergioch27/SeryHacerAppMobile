@@ -5,11 +5,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import ProductsIds from "../../service/dataIds/ProductsIds.json";
 import Loading from '../components/smart_components/Loading';
 import  Header  from '../components/smart_components/Header';
+import { useNavigation } from '@react-navigation/native';
 
 const ProductsList  =  () => {
     const [productData, setProductData] = useState([]);
     const [loading, setLoading] = useState(false);
-
+    const navigation = useNavigation();
       const LoadView = () => {
         if (loading){
 
@@ -75,9 +76,9 @@ const ProductsList  =  () => {
                 <FlatList
                     data={productData}
                     keyExtractor={item => item.id}
-                    // navigation.navigate('ProductDetail', {item})
+                    
                     renderItem={({ item }) => (
-              <Pressable onPress={() => console.log('FUNCIONO')} style={styles.card}>
+              <Pressable onPress={() => navigation.navigate('ProductDetailsView', {item})} style={styles.card}>
                 <ProductCard id={item.id} name={item.name} image={item.images[0]?.src} />
               </Pressable>
             )}

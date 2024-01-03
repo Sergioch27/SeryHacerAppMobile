@@ -4,6 +4,7 @@ import LoginView from '../src/screens/LoginView';
 import RegisterView from '../src/screens/RegisterView';
 import RecoverPasswordView from '../src/screens/RecoverPasswordView';
 import ShopTab from './Shoptab';
+import ProductDetailsView from '../src/screens/ProductDetailsView';
 
 const Stack = createNativeStackNavigator();
 
@@ -32,6 +33,11 @@ const HomeStack = () => {
                     name="ShopTab"
                     options={{ headerShown: false }}
                     component={ShopTab}
+                />
+                <Stack.Screen
+                    name="ProductDetailsView"
+                    options={{ headerShown: false }}
+                    component={ProductDetailsView}
                 />
             </Stack.Navigator>
     );
