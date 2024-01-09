@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
-import Swiper from 'react-native-swiper';
 import { format, addDays, addHours } from 'date-fns';
 
 const Calendar = () => {
