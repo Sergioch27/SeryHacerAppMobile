@@ -5,19 +5,22 @@ import RegisterView from '../src/screens/RegisterView';
 import RecoverPasswordView from '../src/screens/RecoverPasswordView';
 import ShopTab from './Shoptab';
 import ProductDetailsView from '../src/screens/ProductDetailsView';
+import { Pressable } from 'react-native';
+import { AntDesign } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+
 
 const Stack = createNativeStackNavigator();
-
 
 const HomeStack = () => {
     return (
             <Stack.Navigator
-                initialRouteName='ShopTab'
+                // initialRouteName='ShopTab'
             >
                 <Stack.Screen
                     name="LoginView"
                     options={{ headerShown: false }}
-                    component={LoginView}
+                    component={LoginView} 
                 />
                 <Stack.Screen
                     name="RegisterView"
@@ -36,7 +39,6 @@ const HomeStack = () => {
                 />
                 <Stack.Screen
                     name="ProductDetailsView"
-                    options={{ headerShown: false }}
                     component={ProductDetailsView}
                 />
             </Stack.Navigator>

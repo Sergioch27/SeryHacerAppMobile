@@ -12,7 +12,6 @@ const   ApiType = async () => {
         return API_BASE_URL_PRO;
     }
 }
-
 const LoginRequestDev = async (username,password) => {
         try {
             const DataDev = await axios.post( API_BASE_URL_DEV + 'jwt-auth/v1/token', {

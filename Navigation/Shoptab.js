@@ -25,7 +25,7 @@ const  ShopTab = () => {
         <Tab.Screen name="ProductView" component={ProductView} options={{ headerShown: false,
                 tabBarIcon:({focused}) => {
           return (
-            <View style={{ alignItems: 'center', justifyContent: 'center', top: 15 }}>
+            <View style={{ alignItems: 'center', justifyContent: 'center'}}>
             <MaterialCommunityIcons name="office-building-marker" size={30} color={focused? '#A168DE':'#000'} />
             </View>
           )}
@@ -33,7 +33,7 @@ const  ShopTab = () => {
         <Tab.Screen name="OrderView" component={OrderView} options={{ headerShown: false,
                 tabBarIcon:({focused}) => {
           return (
-            <View style={{ alignItems: 'center', justifyContent: 'center', top: 15 }}>
+            <View style={{ alignItems: 'center', justifyContent: 'center' }}>
               <AntDesign name="calendar" size={30} color={focused? '#A168DE':'#000' }/>
             </View>
           )}
@@ -41,7 +41,7 @@ const  ShopTab = () => {
         <Tab.Screen name="PodcastView" component={PodcastView} options={{ headerShown: false,
         tabBarIcon:({focused}) => {
           return (
-            <View style={{ alignItems: 'center', justifyContent: 'center', top: 15 }}>
+            <View style={{ alignItems: 'center', justifyContent: 'center'}}>
               <FontAwesome5 name="podcast" size={30} color={focused? '#A168DE':'#000' } />
             </View>
           )} 
@@ -49,7 +49,7 @@ const  ShopTab = () => {
         <Tab.Screen name="ProfileView" component={ProfileView} options={{ headerShown: false,
                 tabBarIcon:({focused}) => {
           return (
-            <View style={{ alignItems: 'center', justifyContent: 'center', top: 15 }}>
+            <View style={{ alignItems: 'center', justifyContent: 'center' }}>
             <MaterialCommunityIcons name="account-box" size={30} color={focused? '#A168DE':'#000' } />
             </View>
           )}

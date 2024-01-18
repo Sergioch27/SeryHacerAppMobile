@@ -66,11 +66,6 @@ const ProductsList  =  () => {
         <>
             <SafeAreaView>
               <Header />
-            {/* <View style={styles.contentText}>
-                <Text style={styles.text}>
-                    RESERVA DE BOX
-                </Text>
-              </View> */}
                 <View style={styles.contentList}>
                 {LoadView()}
                 <FlatList
@@ -78,7 +73,7 @@ const ProductsList  =  () => {
                     keyExtractor={item => item.id}
                     
                     renderItem={({ item }) => (
-              <Pressable onPress={() => navigation.navigate('ProductDetailsView', {item})} style={styles.card}>
+              <Pressable onPress={() => navigation.navigate('ProductDetailsView', { productItem: item})} style={styles.card}>
                 <ProductCard id={item.id} name={item.name} image={item.images[0]?.src} />
               </Pressable>
             )}
