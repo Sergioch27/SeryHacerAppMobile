@@ -12,7 +12,7 @@ import {
   Button,
   Linking
 } from "react-native";
-import { LoginRequest, LoginRequestDev, LoginSuperUser } from "../../service/wp_service";
+import { LoginRequest, LoginRequestDev, LoginDataUser } from "../../service/wp_service";
 import Loading from "./smart_components/Loading";
 import {ModalViewLogin, ModalViewDev} from "./smart_components/Modals";
 import AsyncStorage from "@react-native-async-storage/async-storage"
@@ -114,6 +114,8 @@ const closeModal2 = () => {
         try {
             setLoading(true)
             const DataUser  = await LoginRequest(username,password);
+            const DataInfoUser = await LoginDataUser(DataUser.token);
+            console.log('DataUserId', DataInfoUser.id);
             navigation.navigate('ShopTab');
             return DataUser;
           }
@@ -152,8 +154,8 @@ const handleDev = async ()=>{
           try {
             setClicked(true);
             const DataUser  = await LoginRequestDev(usernameDev,passwordDev);
-            const DataSuperUser = await LoginSuperUser(DataUser);
-            if (DataSuperUser){
+            const DataSuperUser = await LoginDataUser(DataUser);
+            if (DataSuperUser.is_super_admin){
                 console.log('Se Inicio Sesión como administrador con exitoso', DataUser);
                 Alert.alert('NOMBRE DEL USUARIO: ', DataUser.user_display_name);
                 setLoading(false)

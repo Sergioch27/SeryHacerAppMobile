@@ -27,17 +27,18 @@ const LoginRequestDev = async (username,password) => {
         }
 }
 
-const LoginSuperUser = async (token) => {
+const LoginDataUser = async (token) => {
     try {
-        const DataSuperUser = await axios.get( API_BASE_URL_DEV + 'wp/v2/users/me', {
+        const DataSuperUser = await axios.get( await ApiType() + 'wp/v2/users/me', {
             headers: {
                 Authorization: `Bearer ${token}`
             }
         });
-        return DataSuperUser.data.is_super_admin;
+        await AsyncStorage.setItem('user_id', DataSuperUser.data.id.toString());
+        return DataSuperUser.data;
     }
     catch (error) {
-        console.error('error de inicio sesión como administrador');
+        console.error('error de inicio sesión');
         throw error
     }
 }
@@ -122,14 +123,8 @@ const GetProducts = async (ids)=>{
     console.log(ids);
     for (const id of ids[0].products[0].ids) {
         try {
-            // const token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL3Rlc3QuZXNwYWNpb3NlcnloYWNlci5jb20iLCJpYXQiOjE3MDM4MTczODgsIm5iZiI6MTcwMzgxNzM4OCwiZXhwIjoxNzA0NDIyMTg4LCJkYXRhIjp7InVzZXIiOnsiaWQiOiIyOCJ9fX0.kJk8tqv4QFk8xdS3KqWK1_TpuV-6gpB3_hD9O-nDLxY'
             const token = await AsyncStorage.getItem('user_token');
             console.log(id);
-            // const DataProducts = await axios.get( API_BASE_URL_DEV + 'wc/v3/products/' + `${id}`, {
-            //     headers: {
-            //         Authorization: `Bearer ${token}`
-            //     }
-            // });
             const DataProducts = await axios.get( await ApiType() + 'wc/v3/products/' + `${id}`, {
                 headers: {
                     Authorization: `Bearer ${token}`
@@ -162,4 +157,4 @@ const GetOder = async (page)=>{
         throw err;
     }
 };
-export {LoginOutUser, LoginRequest, RegisterRequest, RecoverPassword, LoginRequestDev, LoginSuperUser, validateCode, passwordRecover, GetProducts,GetOder}
+export {LoginOutUser, LoginRequest, RegisterRequest, RecoverPassword, LoginRequestDev, LoginDataUser, validateCode, passwordRecover, GetProducts,GetOder}

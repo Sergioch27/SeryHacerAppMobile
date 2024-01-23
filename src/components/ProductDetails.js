@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, FlatList, Pressable, ImageBackground} from 'react-native';
-import { format, addHours, startOfMonth, lastDayOfMonth, eachDayOfInterval, isSameDay} from 'date-fns';
+import { format, startOfMonth, lastDayOfMonth, eachDayOfInterval, isSameDay, eachHourOfInterval} from 'date-fns';
 import { useRoute } from '@react-navigation/native';
 import { AntDesign } from '@expo/vector-icons';
 import Loading from "./smart_components/Loading";
@@ -43,6 +43,7 @@ const Calendar = () => {
   const [selectDay, setSelectDay] = useState('');
   const [days, setDays] = useState([]);
   const [imageLoading, setImageLoading] = useState(true);
+  const [fechasSeleccionadas, setFechasSeleccionadas] = useState([]);
   
   const handleImageLoad = () => {
     setImageLoading(false);
@@ -71,13 +72,18 @@ useEffect(()=>{
 },[selectMonth,selectYear,currentDay])
 
 const generateHours = () => {
-  const hours = [];
-  for (let i = 7; i < 22; i++) {
-    hours.push({ startHour: i, endHour: i + 1 });
-  }
+const hours = eachHourOfInterval({
+    start: new Date(selectYear, selectMonth, 1, 8),
+    end: new Date(selectYear, selectMonth, 1, 22),
+})
+return hours.map((hour)=>({
+    id: generateUniqueId(),
+    startHour: hour.getHours(),
+    endHour: hour.getHours() + 1,
+}))
+};
 
-  return hours;
-};  const setSelectDayAndCurrentDay = (selectedDate) => {
+const setSelectDayAndCurrentDay = (selectedDate) => {
     if (!isSameDay(selectedDate, currentDay)) {
 
       setSelectDay(selectedDate);
@@ -92,6 +98,31 @@ const generateHours = () => {
     disabled={!item.date}>
       <Text style={styles.dayNumber}>{format(item.date, 'd')}</Text>
       <Text style={[styles.dayName, item.date && item.date.getDay() === 0 && styles.disabledText]}>{item.date ? dayTranslations[format(item.date, 'EEE')] : ''}</Text>
+    </Pressable>
+  );
+
+  const handlePress = (item) => {
+    if (item.date) {
+
+      const fechaHoraSeleccionada = {
+        año: item.date.getFullYear(),
+        mes: item.date.getMonth() + 1,
+        dia: item.date.getDate(),
+        horaInicio: item.startHour,
+        horaFin: item.endHour,
+      }
+      setFechasSeleccionadas([...fechasSeleccionadas, fechaHoraSeleccionada]);
+    }
+  };
+
+
+  const renderItemHour = ({ item }) => (
+    <Pressable onPress={() => {handlePress(item); console.log(fechasSeleccionadas)} }>
+                  <View style={styles.hourContainer}>
+                <Text style={styles.cardHour}>
+                  {item.startHour}:00 - {item.endHour}:00
+                </Text>
+              </View>
     </Pressable>
   );
 
@@ -132,24 +163,19 @@ const generateHours = () => {
 
   const renderHours = () => {
     const hours = generateHours();
+    console.log(hours);
     return (
       <View>
           <FlatList
             data={hours}
             numColumns={2}
-            keyExtractor={(item, index) => index.toString()}
-            renderItem={({ item }) => (
-              <View style={styles.hourContainer}>
-                <Text style={styles.cardHour}>
-                  {`${format(addHours(new Date(), item.startHour), 'HH' + ':00')} - ${format(addHours(new Date(), item.endHour), 'HH' + ':00')}`}
-                </Text>
-              </View>
-            )}
+            keyExtractor={(item) => item.id}
+            renderItem={renderItemHour}
           />
       </View>
     );
   };
-  
+
     navigation.setOptions({
     headerTransparent: true,
     headerLeft: ()=>(
