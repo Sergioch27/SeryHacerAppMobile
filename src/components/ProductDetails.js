@@ -49,6 +49,7 @@ const Calendar = () => {
     setImageLoading(false);
   }
 const image = { uri: productItem.images[0].src };
+const formBooking = { BookID : productItem.meta_data[2].value}
 
   const generateUniqueId = () => {
     return '_' + Math.random().toString(36);
@@ -71,6 +72,34 @@ useEffect(()=>{
   setDays(generateDays());
 },[selectMonth,selectYear,currentDay])
 
+useEffect(() => {
+  const dateSelected = () => {
+     const horas = generateHours();
+  const selectedDate = new Date(selectYear, selectMonth, currentDay ? currentDay.getDate() : selectDay.getDate());
+
+  const fechasYHorasSeleccionadas = [ 
+  {
+      BookID: formBooking.BookID,
+  }
+  ];
+
+  horas.forEach((hora) => {
+    const fechaHoraSeleccionada = {
+      año: selectedDate.getFullYear(),
+      mes: selectedDate.getMonth() + 1,
+      dia: selectedDate.getDate(),
+      horaInicio: hora.startHour < 10 ? `0${hora.startHour}:00:00` : `${hora.startHour}:00:00`,
+    };
+
+    fechasYHorasSeleccionadas.push(`${fechaHoraSeleccionada.año}-${String(fechaHoraSeleccionada.mes).padStart(2, '0')}-${String(fechaHoraSeleccionada.dia).padStart(2, '0')} ${fechaHoraSeleccionada.horaInicio}`);
+  });
+  console.log('Fecha y Hora Seleccionada:', fechasYHorasSeleccionadas);
+  };
+
+  if (selectDay) {
+    dateSelected();
+  }
+}, [selectDay, currentDay, selectYear, selectMonth]);
 const generateHours = () => {
 const hours = eachHourOfInterval({
     start: new Date(selectYear, selectMonth, 1, 8),

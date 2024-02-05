@@ -33,7 +33,7 @@ useEffect(() => {
             setProfileImage(data.image);
         }
     }, [data]);
-    
+
     return (
         <View style={styles.container}>
         { loading ?
@@ -49,6 +49,7 @@ useEffect(() => {
         </View>
     )
 }
+
 const styles = StyleSheet.create({
     container: {
         backgroundColor: '#fff',
@@ -78,7 +79,7 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 15,
         fontWeight: 'bold',
-     }
+    }
 })
 
 export default ProfileForm

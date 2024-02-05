@@ -154,14 +154,14 @@ const handleDev = async ()=>{
           try {
             setClicked(true);
             const DataUser  = await LoginRequestDev(usernameDev,passwordDev);
+            console.log('DataUser', DataUser);
+            await AsyncStorage.setItem('mod-dev', 'true');
             const DataSuperUser = await LoginDataUser(DataUser);
             if (DataSuperUser.is_super_admin){
                 console.log('Se Inicio Sesión como administrador con exitoso', DataUser);
                 Alert.alert('NOMBRE DEL USUARIO: ', DataUser.user_display_name);
                 setLoading(false)
-                AsyncStorage.setItem('mod-dev', 'true');
                 closeModal2();
-                console.log('Cambiando a modo de desarrollo');
         } else{
             Alert.alert('No es administrador');
             setLoading(false)
@@ -169,6 +169,8 @@ const handleDev = async ()=>{
           }
           catch (err){
             console.error('Error de inicio de sesión', err);
+            setLoading(false)
+            setWarningMessage('Usuario o contraseña incorrectos');
           }
           finally {
             setLoading(false)
