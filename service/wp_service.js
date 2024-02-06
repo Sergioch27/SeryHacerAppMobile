@@ -141,6 +141,24 @@ const GetProducts = async (ids)=>{
     console.log(productDetails);
     return productDetails;
 };
+// consultar disponibilidad de horas en Base de Datos
+const GetHours = async (date)=>{
+    try {
+        const token = await AsyncStorage.getItem('user_token');
+        const DataHours = await axios.post( await ApiType() + 'app/v1/checkBooking', {
+            date,
+        }, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            },
+        });
+        return DataHours.data;
+    }
+    catch (err){
+        console.error('Error de recuperación de horas', err);
+        throw err;
+    }
+};
 
 const GetOder = async (page)=>{
     try {
@@ -157,4 +175,7 @@ const GetOder = async (page)=>{
         throw err;
     }
 };
-export {LoginOutUser, LoginRequest, RegisterRequest, RecoverPassword, LoginRequestDev, LoginDataUser, validateCode, passwordRecover, GetProducts,GetOder}
+export {LoginOutUser, LoginRequest, RegisterRequest, RecoverPassword, LoginRequestDev, LoginDataUser, validateCode, passwordRecover, GetProducts,GetOder,GetHours}
+
+
+
