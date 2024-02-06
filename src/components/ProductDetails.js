@@ -74,7 +74,7 @@ useEffect(()=>{
 
 useEffect(() => {
   const dateSelected = () => {
-     const horas = generateHours();
+  const horas = generateHours();
   const selectedDate = new Date(selectYear, selectMonth, currentDay ? currentDay.getDate() : selectDay.getDate());
 
   const fechasYHorasSeleccionadas = [ 
