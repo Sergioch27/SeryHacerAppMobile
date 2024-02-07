@@ -46,6 +46,7 @@ const Calendar = () => {
   const [imageLoading, setImageLoading] = useState(true);
   const [fechasSeleccionadas, setFechasSeleccionadas] = useState([]);
   const [hasExecuted, setHasExecuted] = useState(false);
+  const [bookedHours, setBookedHours] = useState([{}]);
 
   const handleImageLoad = () => {
     setImageLoading(false);
@@ -101,9 +102,14 @@ useEffect(() => {
   if((selectDay || currentDay) && !hasExecuted) {
     const CheckHour = dateSelected();
     GetHours(CheckHour).then((res) => {
-      console.log('Horas Disponibles:', res);
-    });
-    setHasExecuted(true);
+      const BookedEvent = res.map(item => ({
+        ...item,
+        event_start: item.fechaHora.split(' ')[1].slice(0, -3),
+      }));
+    
+      console.log('Horas Disponibles:', BookedEvent);
+      setBookedHours(BookedEvent);
+    });    setHasExecuted(true);
   }
   if (selectDay) {
     setHasExecuted(false);
@@ -129,7 +135,13 @@ const setSelectDayAndCurrentDay = (selectedDate) => {
     }
     setCurrentDay(selectedDate);
   };
-
+const getHoursStyle = (bookedHours) => {
+  if (bookedHours.state === 'booked' && bookedHours.active === '1') {
+    return styles.bookedAndActiveHour;
+  } else if (item.state === 'booked') {
+    return styles.bookedHour;
+  }
+}
   const renderItemDays = ({ item }) => (
     <Pressable onPress={() => setSelectDayAndCurrentDay(item.date)} style={[styles.card, item.date && item.date.getDay() === 0 && styles.disabledDay, (isSameDay(selectDay, item.date) || isSameDay(currentDay, item.date)) && styles.containerSelected,
     item.isCurrentDay && styles.containerSelected
@@ -156,9 +168,9 @@ const setSelectDayAndCurrentDay = (selectedDate) => {
 
 
   const renderItemHour = ({ item }) => (
-    <Pressable onPress={() => {handlePress(item); console.log(fechasSeleccionadas)} }>
+    <Pressable onPress={() => {handlePress(item); console.log(fechasSeleccionadas)}} disabled={item.active === "1"} style={item.active === "1" ? styles.disabledButton : null}>
       <View style={styles.hourContainer}>
-        <Text style={styles.cardHour}>
+        <Text style={[styles.cardHour, item.active === "1" ? styles.inactiveHour : styles.activeHour]}>
           {item.startHour}:00 - {item.endHour}:00
         </Text>
       </View>
@@ -371,6 +383,17 @@ containerSelected: {
     marginBottom: 10,
     marginTop: 20,
     alignSelf: 'center',
+  },
+  activeHour: {
+    color: 'green', 
+  },
+  inactiveHour: {
+    // Estilo para horas inactivas
+    color: 'red', // o cualquier otro estilo que desees
+  },
+  disabledButton: {
+    // Estilo para botones desactivados
+    opacity: 0.5, // o cualquier otro estilo que desees
   },
 });
 
