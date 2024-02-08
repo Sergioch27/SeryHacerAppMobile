@@ -5,6 +5,7 @@ import { useRoute } from '@react-navigation/native';
 import { AntDesign } from '@expo/vector-icons';
 import Loading from "./smart_components/Loading";
 import { useNavigation } from '@react-navigation/native';
+import { GetHours } from '../../service/wp_service';
 
 
 const Calendar = () => {
@@ -44,7 +45,9 @@ const Calendar = () => {
   const [days, setDays] = useState([]);
   const [imageLoading, setImageLoading] = useState(true);
   const [fechasSeleccionadas, setFechasSeleccionadas] = useState([]);
-  
+  const [hasExecuted, setHasExecuted] = useState(false);
+  const [bookedHours, setBookedHours] = useState([{}]);
+
   const handleImageLoad = () => {
     setImageLoading(false);
   }
@@ -76,8 +79,9 @@ useEffect(() => {
   const dateSelected = () => {
   const horas = generateHours();
   const selectedDate = new Date(selectYear, selectMonth, currentDay ? currentDay.getDate() : selectDay.getDate());
+  console.log('DIA: ', selectedDate);
 
-  const fechasYHorasSeleccionadas = [ 
+  const fechasYHorasSeleccionadas = [
   {
       BookID: formBooking.BookID,
   }
@@ -93,13 +97,25 @@ useEffect(() => {
 
     fechasYHorasSeleccionadas.push(`${fechaHoraSeleccionada.año}-${String(fechaHoraSeleccionada.mes).padStart(2, '0')}-${String(fechaHoraSeleccionada.dia).padStart(2, '0')} ${fechaHoraSeleccionada.horaInicio}`);
   });
-  console.log('Fecha y Hora Seleccionada:', fechasYHorasSeleccionadas);
+  return fechasYHorasSeleccionadas;
   };
-
-  if (selectDay) {
-    dateSelected();
+  if((selectDay || currentDay) && !hasExecuted) {
+    const CheckHour = dateSelected();
+    GetHours(CheckHour).then((res) => {
+      const BookedEvent = res.map(item => ({
+        ...item,
+        event_start: item.fechaHora.split(' ')[1].slice(0, -3),
+      }));
+    
+      console.log('Horas Disponibles:', BookedEvent);
+      setBookedHours(BookedEvent);
+    });    setHasExecuted(true);
   }
-}, [selectDay, currentDay, selectYear, selectMonth]);
+  if (selectDay) {
+    setHasExecuted(false);
+  }
+}, [selectDay, currentDay, hasExecuted, selectMonth, selectYear]);
+
 const generateHours = () => {
 const hours = eachHourOfInterval({
     start: new Date(selectYear, selectMonth, 1, 8),
@@ -119,7 +135,13 @@ const setSelectDayAndCurrentDay = (selectedDate) => {
     }
     setCurrentDay(selectedDate);
   };
-
+const getHoursStyle = (bookedHours) => {
+  if (bookedHours.state === 'booked' && bookedHours.active === '1') {
+    return styles.bookedAndActiveHour;
+  } else if (item.state === 'booked') {
+    return styles.bookedHour;
+  }
+}
   const renderItemDays = ({ item }) => (
     <Pressable onPress={() => setSelectDayAndCurrentDay(item.date)} style={[styles.card, item.date && item.date.getDay() === 0 && styles.disabledDay, (isSameDay(selectDay, item.date) || isSameDay(currentDay, item.date)) && styles.containerSelected,
     item.isCurrentDay && styles.containerSelected
@@ -146,12 +168,12 @@ const setSelectDayAndCurrentDay = (selectedDate) => {
 
 
   const renderItemHour = ({ item }) => (
-    <Pressable onPress={() => {handlePress(item); console.log(fechasSeleccionadas)} }>
-                  <View style={styles.hourContainer}>
-                <Text style={styles.cardHour}>
-                  {item.startHour}:00 - {item.endHour}:00
-                </Text>
-              </View>
+    <Pressable onPress={() => {handlePress(item); console.log(fechasSeleccionadas)}} disabled={item.active === "1"} style={item.active === "1" ? styles.disabledButton : null}>
+      <View style={styles.hourContainer}>
+        <Text style={[styles.cardHour, item.active === "1" ? styles.inactiveHour : styles.activeHour]}>
+          {item.startHour}:00 - {item.endHour}:00
+        </Text>
+      </View>
     </Pressable>
   );
 
@@ -197,7 +219,7 @@ const setSelectDayAndCurrentDay = (selectedDate) => {
       <View>
           <FlatList
             data={hours}
-            numColumns={2}
+            horizontal={true}
             keyExtractor={(item) => item.id}
             renderItem={renderItemHour}
           />
@@ -262,8 +284,11 @@ const setSelectDayAndCurrentDay = (selectedDate) => {
             )}
           />
         </View>
-          {renderDays()}
-          {renderHours()}
+            {renderDays()}
+          <View>
+          <Text style={[styles.titleHours]}>HORAS DISPONIBLES</Text>
+            {renderHours()}
+          </View>
     </View>
 </SafeAreaView>
   );
@@ -281,7 +306,7 @@ const styles = StyleSheet.create({
   },
   hourContainer: {
     flexDirection: 'column',
-    width: 150,
+    width: 180,
     padding: 20,
     margin: 5,
     borderRadius: 8,
@@ -303,7 +328,7 @@ cardHour:{
     alignItems: 'center',
   },
   disabledDay: {
-    backgroundColor: '#ccc', 
+    backgroundColor: '#ccc',
   },
   disabledText: {
     color: '#888',
@@ -351,6 +376,24 @@ containerSelected: {
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
     padding: 20,
+  },
+  titleHours: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    marginTop: 20,
+    alignSelf: 'center',
+  },
+  activeHour: {
+    color: 'green', 
+  },
+  inactiveHour: {
+    // Estilo para horas inactivas
+    color: 'red', // o cualquier otro estilo que desees
+  },
+  disabledButton: {
+    // Estilo para botones desactivados
+    opacity: 0.5, // o cualquier otro estilo que desees
   },
 });
 
