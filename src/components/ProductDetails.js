@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, FlatList, Pressable, ImageBackground} from 'react-native';
-import { format, startOfMonth, lastDayOfMonth, eachDayOfInterval, isSameDay, eachHourOfInterval} from 'date-fns';
+import { format, startOfMonth, lastDayOfMonth, eachDayOfInterval, isSameDay, eachHourOfInterval, set} from 'date-fns';
 import { useRoute } from '@react-navigation/native';
 import { AntDesign } from '@expo/vector-icons';
 import Loading from "./smart_components/Loading";
@@ -47,6 +47,8 @@ const Calendar = () => {
   const [fechasSeleccionadas, setFechasSeleccionadas] = useState([]);
   const [hasExecuted, setHasExecuted] = useState(false);
   const [bookedHours, setBookedHours] = useState([{}]);
+  const [loading, setLoading] = useState(false);
+
 
   const handleImageLoad = () => {
     setImageLoading(false);
@@ -77,6 +79,7 @@ useEffect(()=>{
 
 useEffect(() => {
   const dateSelected = () => {
+  setLoading(true);
   const horas = generateHours();
   const selectedDate = new Date(selectYear, selectMonth, currentDay ? currentDay.getDate() : selectDay.getDate());
   console.log('DIA: ', selectedDate);
@@ -104,12 +107,14 @@ useEffect(() => {
     GetHours(CheckHour).then((res) => {
       const BookedEvent = res.map(item => ({
         ...item,
-        event_start: item.fechaHora.split(' ')[1].slice(0, -3),
+        event_start: item.fechaHora.split(' ')[1].slice(0, -6),
       }));
-    
+      
       console.log('Horas Disponibles:', BookedEvent);
       setBookedHours(BookedEvent);
-    });    setHasExecuted(true);
+      setLoading(false);
+    });
+    setHasExecuted(true);
   }
   if (selectDay) {
     setHasExecuted(false);
@@ -129,21 +134,18 @@ return hours.map((hour)=>({
 };
 
 const setSelectDayAndCurrentDay = (selectedDate) => {
+  setBookedHours([{}]);
+  setHasExecuted(false);
     if (!isSameDay(selectedDate, currentDay)) {
 
       setSelectDay(selectedDate);
     }
     setCurrentDay(selectedDate);
   };
-const getHoursStyle = (bookedHours) => {
-  if (bookedHours.state === 'booked' && bookedHours.active === '1') {
-    return styles.bookedAndActiveHour;
-  } else if (item.state === 'booked') {
-    return styles.bookedHour;
-  }
-}
+// Funcion para renderizar un item de la lista de dias
   const renderItemDays = ({ item }) => (
-    <Pressable onPress={() => setSelectDayAndCurrentDay(item.date)} style={[styles.card, item.date && item.date.getDay() === 0 && styles.disabledDay, (isSameDay(selectDay, item.date) || isSameDay(currentDay, item.date)) && styles.containerSelected,
+    <Pressable onPress={() => {setSelectDayAndCurrentDay(item.date); console.error('DIA',bookedHours)}} 
+    style={[styles.card, item.date && item.date.getDay() === 0 && styles.disabledDay, (isSameDay(selectDay, item.date) || isSameDay(currentDay, item.date)) && styles.containerSelected,
     item.isCurrentDay && styles.containerSelected
     ]}
     disabled={!item.date}>
@@ -152,6 +154,7 @@ const getHoursStyle = (bookedHours) => {
     </Pressable>
   );
 
+// Funcion para manejar el evento de presionar un item de la lista de horas
   const handlePress = (item) => {
     if (item.date) {
 
@@ -166,17 +169,31 @@ const getHoursStyle = (bookedHours) => {
     }
   };
 
-
-  const renderItemHour = ({ item }) => (
-    <Pressable onPress={() => {handlePress(item); console.log(fechasSeleccionadas)}} disabled={item.active === "1"} style={item.active === "1" ? styles.disabledButton : null}>
+// Funcion para renderizar un item de la lista de horas
+  const renderItemHour = ({ item }) => {
+    console.log('ITEM',item.startHour);
+    const startHour = item.startHour < 10 ? `0${item.startHour}` : item.startHour;
+    console.log('HORA',startHour)
+    const isBooked = bookedHours.find(booking => booking.active === "1" && booking.event_start === `${item.startHour}`);
+    const hourStyle = isBooked ? styles.inactiveHour : styles.activeHour;
+    return (
+    <Pressable onPress={() => {handlePress(item); console.log('FECHA',fechasSeleccionadas); console.error(bookedHours)}} disabled={bookedHours.active === "1"} style={bookedHours.active === "1" ? styles.disabledButton : null}>
       <View style={styles.hourContainer}>
-        <Text style={[styles.cardHour, item.active === "1" ? styles.inactiveHour : styles.activeHour]}>
+        <Text style={[styles.cardHour, hourStyle ]}>
           {item.startHour}:00 - {item.endHour}:00
         </Text>
+        {isBooked ?             
+            <View style={ styles.tagbookedContainer}>
+              <Text style={[styles.tagbooked,styles.tagbookedText]}>Reservado</Text>
+            </View>
+            : <View style={ styles.tagbookedAvalibleContainer}>
+            <Text style={[styles.tagAvaliblebooked,styles.tagbookedAvalibleText]}>Disponible</Text>
+          </View>
+}          
       </View>
     </Pressable>
   );
-
+  };
   const flatListRef = useRef(null);
 
   useEffect(() => {
@@ -287,7 +304,7 @@ const getHoursStyle = (bookedHours) => {
             {renderDays()}
           <View>
           <Text style={[styles.titleHours]}>HORAS DISPONIBLES</Text>
-            {renderHours()}
+            {loading ? <Loading/> : renderHours()}
           </View>
     </View>
 </SafeAreaView>
@@ -305,7 +322,7 @@ const styles = StyleSheet.create({
     marginTop: 100,
   },
   hourContainer: {
-    flexDirection: 'column',
+    position:'relative', 
     width: 180,
     padding: 20,
     margin: 5,
@@ -388,13 +405,46 @@ containerSelected: {
     color: 'green', 
   },
   inactiveHour: {
-    // Estilo para horas inactivas
-    color: 'red', // o cualquier otro estilo que desees
+
+    color: 'red', 
   },
   disabledButton: {
-    // Estilo para botones desactivados
-    opacity: 0.5, // o cualquier otro estilo que desees
+
+    opacity: 0.5, 
+    backgroundColor: '#e0e0e0',
   },
-});
+  tagbookedContainer: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'red',
+    padding: 5,
+    borderBottomLeftRadius: 8,
+    borderTopLeftRadius: 8,
+  },
+  tagbookedAvalibleContainer:{
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'green',
+    padding: 5,
+    borderBottomLeftRadius: 8,
+    borderTopLeftRadius: 8,
+  },
+  tagbooked: {
+    backgroundColor: 'red', 
+  },
+  tagAvaliblebooked: {
+    backgroundColor: 'green', 
+  },
+  tagbookedText: {
+    color: 'white',
+    fontSize: 10,
+  },
+  tagbookedAvalibleText: {
+    color: 'white',
+    fontSize: 10,
+  }
+  });
 
 export default Calendar;
