@@ -117,7 +117,7 @@ const passwordRecover = async (form)=>{
     }
 
 }
-
+// consultar productos en API
 const GetProducts = async (ids)=>{
     const productDetails = []
     console.log(ids);
@@ -125,22 +125,53 @@ const GetProducts = async (ids)=>{
         try {
             const token = await AsyncStorage.getItem('user_token');
             console.log(id);
-            const DataProducts = await axios.get( await ApiType() + 'wc/v3/products/' + `${id}`, {
+            const DataProductsVariation = await axios.get( await ApiType() + 'wc/v3/products/' + `${id}` + '/variations', {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
             });
-            console.log(token);
-            productDetails.push(DataProducts.data);
+            if(DataProductsVariation.data.length === 0){
+                const DataProducts = await axios.get( await ApiType() + 'wc/v3/products/' + `${id}`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+                productDetails.push(DataProducts.data);
+            }else {
+                productDetails.push(DataProductsVariation.data);
+            }
         }
         catch (err){
             console.error('Error de recuperación de productos', err);
             throw err;
         }
     }
-    console.log(productDetails);
+    console.log('LLEGUE',productDetails);
     return productDetails;
 };
+
+// consultar productos en API por id de producto padre de variaciones
+const GetProductsParent = async (id)=>{
+    const productDetailsParents = []
+    for (const i of id) {
+        try {
+            const token = await AsyncStorage.getItem('user_token');
+            const DataProducts = await axios.get( await ApiType() + 'wc/v3/products/' + `${i}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            productDetailsParents.push(DataProducts.data);
+        }
+        catch (err){
+            console.error('Error de recuperación de productos', err);
+            throw err;
+        }
+    }
+    return productDetailsParents;
+
+};
+
 // consultar disponibilidad de horas en Base de Datos
 const GetHours = async (date)=>{
     try {
@@ -175,7 +206,7 @@ const GetOder = async (page)=>{
         throw err;
     }
 };
-export {LoginOutUser, LoginRequest, RegisterRequest, RecoverPassword, LoginRequestDev, LoginDataUser, validateCode, passwordRecover, GetProducts,GetOder,GetHours}
+export {LoginOutUser, LoginRequest, RegisterRequest, RecoverPassword, LoginRequestDev, LoginDataUser, validateCode, passwordRecover, GetProducts,GetOder,GetHours, GetProductsParent}
 
 
 

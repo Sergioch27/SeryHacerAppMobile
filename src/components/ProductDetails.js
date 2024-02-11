@@ -43,19 +43,43 @@ const Calendar = () => {
   const [currentDay, setCurrentDay] = useState(new Date());
   const [selectDay, setSelectDay] = useState('');
   const [days, setDays] = useState([]);
-  const [imageLoading, setImageLoading] = useState(true);
   const [fechasSeleccionadas, setFechasSeleccionadas] = useState([]);
   const [hasExecuted, setHasExecuted] = useState(false);
   const [bookedHours, setBookedHours] = useState([{}]);
   const [loading, setLoading] = useState(false);
 
 
-  const handleImageLoad = () => {
-    setImageLoading(false);
-  }
-const image = { uri: productItem.images[0].src };
-const formBooking = { BookID : productItem.meta_data[2].value}
 
+  const imgSrc = ()=>{
+    if (Array.isArray(productItem) && productItem.length > 0) {
+      return productItem[0].image.src ;
+    } else if (productItem && productItem.images && productItem.images.length > 0) {
+      return   productItem.images[0].src ;
+    }
+  }
+const ProductName = ()  => {
+  if(Array.isArray(productItem) && productItem.length > 0) {
+    return productItem[0].parent_data.name;
+  } else {
+    return productItem.name;
+  }
+}
+    const formBookingValue = [];
+    if (Array.isArray(productItem) && productItem.length > 0) {
+      productItem.forEach(element => {
+        for (let i = 0; i < element.meta_data.length; i++) {
+          if (element.meta_data[i].key === 'bookacti_variable_form') {
+            formBookingValue.push(element.meta_data[i].value);
+          }
+        }
+        if(element.parent_id === 12110 && formBookingValue.indexOf('6') === -1){
+          formBookingValue.push('6');
+        }
+      });
+    } else {
+      formBookingValue.push(productItem.meta_data[2].value);
+    }
+    console.log('formBookingValue', formBookingValue);
   const generateUniqueId = () => {
     return '_' + Math.random().toString(36);
   };
@@ -86,7 +110,7 @@ useEffect(() => {
 
   const fechasYHorasSeleccionadas = [
   {
-      BookID: formBooking.BookID,
+      BookID: formBookingValue,
   }
   ];
 
@@ -100,6 +124,7 @@ useEffect(() => {
 
     fechasYHorasSeleccionadas.push(`${fechaHoraSeleccionada.año}-${String(fechaHoraSeleccionada.mes).padStart(2, '0')}-${String(fechaHoraSeleccionada.dia).padStart(2, '0')} ${fechaHoraSeleccionada.horaInicio}`);
   });
+  console.log('Fechas y Horas Seleccionadas:', fechasYHorasSeleccionadas);
   return fechasYHorasSeleccionadas;
   };
   if((selectDay || currentDay) && !hasExecuted) {
@@ -109,7 +134,7 @@ useEffect(() => {
         ...item,
         event_start: item.fechaHora.split(' ')[1].slice(0, -6),
       }));
-      
+
       console.log('Horas Disponibles:', BookedEvent);
       setBookedHours(BookedEvent);
       setLoading(false);
@@ -130,6 +155,7 @@ return hours.map((hour)=>({
     id: generateUniqueId(),
     startHour: hour.getHours(),
     endHour: hour.getHours() + 1,
+    date: selectDay || currentDay,
 }))
 };
 
@@ -144,7 +170,7 @@ const setSelectDayAndCurrentDay = (selectedDate) => {
   };
 // Funcion para renderizar un item de la lista de dias
   const renderItemDays = ({ item }) => (
-    <Pressable onPress={() => {setSelectDayAndCurrentDay(item.date); console.error('DIA',bookedHours)}} 
+    <Pressable onPress={() => {setSelectDayAndCurrentDay(item.date)}}
     style={[styles.card, item.date && item.date.getDay() === 0 && styles.disabledDay, (isSameDay(selectDay, item.date) || isSameDay(currentDay, item.date)) && styles.containerSelected,
     item.isCurrentDay && styles.containerSelected
     ]}
@@ -154,42 +180,47 @@ const setSelectDayAndCurrentDay = (selectedDate) => {
     </Pressable>
   );
 
-// Funcion para manejar el evento de presionar un item de la lista de horas
+// Función para manejar el evento de presionar un item de la lista de horas
   const handlePress = (item) => {
-    if (item.date) {
-
+    console.log('FUNCIONO', item.startHour, item.endHour, item.date);
       const fechaHoraSeleccionada = {
         año: item.date.getFullYear(),
         mes: item.date.getMonth() + 1,
         dia: item.date.getDate(),
-        horaInicio: item.startHour,
-        horaFin: item.endHour,
-      }
-      setFechasSeleccionadas([...fechasSeleccionadas, fechaHoraSeleccionada]);
-    }
+        horaInicio: item.startHour < 10 ? `0${item.startHour}:00:00` : `${item.startHour}:00:00`,
+        horaFin: item.endHour < 10 ? `0${item.endHour}:00:00` : `${item.endHour}:00:00`,
+      };
+      const fechaEncontrada = fechasSeleccionadas.find((fecha) => fecha.año === fechaHoraSeleccionada.año && fecha.mes === fechaHoraSeleccionada.mes && fecha.dia === fechaHoraSeleccionada.dia && fecha.horaInicio === fechaHoraSeleccionada.horaInicio);
+        if (fechaEncontrada) {
+          const nuevasFechas = fechasSeleccionadas.filter((fecha) => fecha !== fechaEncontrada);
+          setFechasSeleccionadas(nuevasFechas);
+          console.log('Fechas Seleccionadas:', nuevasFechas);
+          return;
+        }
+        setFechasSeleccionadas([...fechasSeleccionadas, fechaHoraSeleccionada]);
+        console.log('Fechas Seleccionadas:', [...fechasSeleccionadas, fechaHoraSeleccionada]);
+        return fechasSeleccionadas;
   };
 
 // Funcion para renderizar un item de la lista de horas
   const renderItemHour = ({ item }) => {
-    console.log('ITEM',item.startHour);
     const startHour = item.startHour < 10 ? `0${item.startHour}` : item.startHour;
-    console.log('HORA',startHour)
     const isBooked = bookedHours.find(booking => booking.active === "1" && booking.event_start === `${item.startHour}`);
     const hourStyle = isBooked ? styles.inactiveHour : styles.activeHour;
     return (
-    <Pressable onPress={() => {handlePress(item); console.log('FECHA',fechasSeleccionadas); console.error(bookedHours)}} disabled={bookedHours.active === "1"} style={bookedHours.active === "1" ? styles.disabledButton : null}>
+  <Pressable onPress={() => handlePress(item)} disabled={bookedHours.active === "1"}>
       <View style={styles.hourContainer}>
         <Text style={[styles.cardHour, hourStyle ]}>
           {item.startHour}:00 - {item.endHour}:00
         </Text>
-        {isBooked ?             
+        {isBooked ?
             <View style={ styles.tagbookedContainer}>
               <Text style={[styles.tagbooked,styles.tagbookedText]}>Reservado</Text>
             </View>
             : <View style={ styles.tagbookedAvalibleContainer}>
             <Text style={[styles.tagAvaliblebooked,styles.tagbookedAvalibleText]}>Disponible</Text>
           </View>
-}          
+}
       </View>
     </Pressable>
   );
@@ -216,7 +247,6 @@ const setSelectDayAndCurrentDay = (selectedDate) => {
 
   const renderDays = () => {
     const days = generateDays();
-    console.log(days)
   return (
     <FlatList
         ref={flatListRef}
@@ -231,7 +261,6 @@ const setSelectDayAndCurrentDay = (selectedDate) => {
 
   const renderHours = () => {
     const hours = generateHours();
-    console.log(hours);
     return (
       <View>
           <FlatList
@@ -251,7 +280,7 @@ const setSelectDayAndCurrentDay = (selectedDate) => {
             <AntDesign name="leftcircle" size={30} color="black" />
         </Pressable>
     ),
-    headerTitle: productItem.name,
+    headerTitle: ProductName(),
     headerTitleStyle: {
       color: '#ffffff',
       fontSize: 25,
@@ -261,10 +290,8 @@ const setSelectDayAndCurrentDay = (selectedDate) => {
 <SafeAreaView>
     <View style={styles.ZoneImage}>
     {
-      imageLoading && <Loading style={styles.load}/>
+         imgSrc() && <ImageBackground source={{ uri: imgSrc() }} style={styles.backgroundProduct} />
     }
-      <ImageBackground source={image} resizeMode="cover" style={styles.backgroundProduct} onLoad={handleImageLoad}>
-      </ImageBackground>
     </View>
     <View style={styles.ZoneCalendar}>
         <View style={styles.YearZoneSelector}>
@@ -274,7 +301,7 @@ const setSelectDayAndCurrentDay = (selectedDate) => {
             keyExtractor={(item)=>item.toString()}
             renderItem={({item}) => (
               <>
-                <Pressable onPress={() => {console.log('A Selecionado', selectYear); setSelectYear(item)}} style={[styles.yearContainer, selectYear === item && styles.containerSelected]}>
+                <Pressable onPress={() => {setSelectYear(item)}} style={[styles.yearContainer, selectYear === item && styles.containerSelected]}>
                     <Text>
                       {item}
                     </Text>
@@ -290,7 +317,6 @@ const setSelectDayAndCurrentDay = (selectedDate) => {
             keyExtractor={(item)=>item.value.toString()}
             renderItem={({item}) =>(
                 <Pressable onPress={() => {
-                  console.log('MES Selecionado', selectMonth);
                   setSelectMonth(item.value)
                 }}
                 style={[styles.card, selectMonth === item.value && styles.containerSelected]} >
@@ -444,7 +470,10 @@ containerSelected: {
   tagbookedAvalibleText: {
     color: 'white',
     fontSize: 10,
-  }
+  },
+  selectedHour: {
+    backgroundColor: '#A168DE',
+  },
   });
 
 export default Calendar;

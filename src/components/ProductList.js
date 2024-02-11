@@ -1,6 +1,6 @@
 import React, {useEffect, useState } from 'react';
 import { Pressable, SafeAreaView, Text, View, StyleSheet, Image, FlatList} from "react-native";
-import { GetProducts} from "../../service/wp_service";
+import { GetProducts, GetProductsParent} from "../../service/wp_service";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ProductsIds from "../../service/dataIds/ProductsIds.json";
 import Loading from '../components/smart_components/Loading';
@@ -33,6 +33,24 @@ const ProductsList  =  () => {
                 const productArray = ProductsIds.Data[environment];
                 // const productArray = ProductsIds.Data['DEV']; //solo para pruebas, SE DEBE BORRAR AL TERMINAR
                 const productData = await GetProducts(productArray);
+                if (Array.isArray(productData) && productData.length > 0) {
+                  let parentIds = [];
+                  productData.forEach((product) => {
+                    if (Array.isArray(product) && product.length > 0) {
+                      parentIds.push(product[0].parent_id);
+                    }
+                  });
+                  console.log('parentIds', parentIds);
+                  const parentProducts = await GetProductsParent(parentIds);
+                  console.log('parentProducts', parentProducts);
+                  if(Array.isArray(parentProducts) && parentProducts.length > 0) {
+                    productData.forEach((product, index) => {
+                      if (Array.isArray(product) && product.length > 0) {
+                        productData[index][0].parent_data = parentProducts.find((parent) => parent.id === product[0].parent_id);
+                      }
+                    });
+                  }
+                }
                 setProductData(productData);
                 console.log('Productos', productData);
                 }
@@ -44,11 +62,42 @@ const ProductsList  =  () => {
                 setLoading(false);
             }
         }
+
         GetProductsIds();
     }, [])
 
+    const GetProductsImage = (product) => {
+      if (Array.isArray(product) && product.length > 0) {
+        return product[0].image.src;
+      } else if(product && product.images && product.images.length > 0){
+        return product.images[0].src;
+      }
+     }
+      const GetProductsName = (product) => {
+        if(Array.isArray(product) && product.length > 0) {
+          return product[0].parent_data.name
+        } else if (product){
+          return product.name
+        }
+      }
+      const GetProductsPrice = (product) => {
+        if(Array.isArray(product) && product.length > 0) {
+          return product[0].parent_data.price
+        } else if (product){
+          return product.regular_price
+        }
+      }
+      const getProductsId = (product) => {
+        if(Array.isArray(product) && product.length > 0) {
+          product.forEach(element => {
+            return element.id
+          });
+        } else if (product){
+          return product.id
+        }
+      }
 
-    const ProductCard = ({ id, name, image }) => {
+    const ProductCard = ({ id, name, image, price  }) => {
         return (
           <View key={id} style={styles.cardContent}>
             <View>
@@ -58,10 +107,12 @@ const ProductsList  =  () => {
               <Text style={styles.text}>
                 {name}
               </Text>
+              <Text style={styles.priceText}>{price}</Text>
             </View>
           </View>
         );
       };
+
           return (
         <>
             <SafeAreaView>
@@ -70,11 +121,10 @@ const ProductsList  =  () => {
                 {LoadView()}
                 <FlatList
                     data={productData}
-                    keyExtractor={item => item.id}
-                    
+                    keyExtractor={item => getProductsId(item)}
                     renderItem={({ item }) => (
               <Pressable onPress={() => navigation.navigate('ProductDetailsView', { productItem: item})} style={styles.card}>
-                <ProductCard id={item.id} name={item.name} image={item.images[0]?.src} />
+                    <ProductCard id={item.id} name={GetProductsName(item)} image={GetProductsImage(item)} price={GetProductsPrice(item)} />
               </Pressable>
             )}
             initialScrollIndex={0}
