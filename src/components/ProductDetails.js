@@ -8,6 +8,16 @@ import { useNavigation } from '@react-navigation/native';
 import { GetHours } from '../../service/wp_service';
 
 
+/**
+ * Calendar component for selecting dates and hours.
+ */
+/**
+ * Calendar component for selecting dates and hours.
+ * @returns {JSX.Element} The rendered Calendar component.
+ */
+/**
+ * Calendar component for selecting dates and hours.
+ */
 const Calendar = () => {
   const route = useRoute();
   const { productItem } = route.params
@@ -47,9 +57,16 @@ const Calendar = () => {
   const [hasExecuted, setHasExecuted] = useState(false);
   const [bookedHours, setBookedHours] = useState([{}]);
   const [loading, setLoading] = useState(false);
+  const [ShowTypeBooking, setShowTypeBooking] = useState(false);
+  const [ShowRenderHour, setShowRenderHour] = useState(false);
+  const [selectedButton, setSelectedButton] = useState(null);
+  const [ButtonPressed, setButtonPressed] = useState(false);
+  const [LoadingHours, setLoadingHours] = useState(false);
 
-
-
+  /**
+   * Returns the source of the image for the product.
+   * @returns {string} The source of the image.
+   */
   const imgSrc = ()=>{
     if (Array.isArray(productItem) && productItem.length > 0) {
       return productItem[0].image.src ;
@@ -57,6 +74,10 @@ const Calendar = () => {
       return   productItem.images[0].src ;
     }
   }
+/**
+ * Returns the name of the product.
+ * @returns {string} The name of the product.
+ */
 const ProductName = ()  => {
   if(Array.isArray(productItem) && productItem.length > 0) {
     return productItem[0].parent_data.name;
@@ -84,6 +105,17 @@ const ProductName = ()  => {
     return '_' + Math.random().toString(36);
   };
 
+const typeBooking = [];
+if (Array.isArray(productItem) && productItem.length > 0) {
+  productItem.forEach(element => {
+    for (let i = 0; i < element.attributes.length; i++) {
+      if (element.attributes[i].name === 'TIPO DE RESERVA') {
+        typeBooking.push(element.attributes[i].option);
+      }
+    }
+  });
+    console.log('typeBooking', typeBooking);
+}
   const generateDays = () => {
       const startOfMonthDate = startOfMonth(new Date(selectYear,selectMonth,1));
       const  endOfMonthDate = lastDayOfMonth(new Date(selectYear,selectMonth,1));
@@ -103,7 +135,9 @@ useEffect(()=>{
 
 useEffect(() => {
   const dateSelected = () => {
-  setLoading(true);
+    setLoading(true);
+    setShowRenderHour(false);
+    setSelectedButton(null);
   const horas = generateHours();
   const selectedDate = new Date(selectYear, selectMonth, currentDay ? currentDay.getDate() : selectDay.getDate());
   console.log('DIA: ', selectedDate);
@@ -137,7 +171,9 @@ useEffect(() => {
 
       console.log('Horas Disponibles:', BookedEvent);
       setBookedHours(BookedEvent);
+      setShowTypeBooking(true);
       setLoading(false);
+
     });
     setHasExecuted(true);
   }
@@ -163,7 +199,6 @@ const setSelectDayAndCurrentDay = (selectedDate) => {
   setBookedHours([{}]);
   setHasExecuted(false);
     if (!isSameDay(selectedDate, currentDay)) {
-
       setSelectDay(selectedDate);
     }
     setCurrentDay(selectedDate);
@@ -190,30 +225,36 @@ const setSelectDayAndCurrentDay = (selectedDate) => {
         horaInicio: item.startHour < 10 ? `0${item.startHour}:00:00` : `${item.startHour}:00:00`,
         horaFin: item.endHour < 10 ? `0${item.endHour}:00:00` : `${item.endHour}:00:00`,
       };
+
       const fechaEncontrada = fechasSeleccionadas.find((fecha) => fecha.año === fechaHoraSeleccionada.año && fecha.mes === fechaHoraSeleccionada.mes && fecha.dia === fechaHoraSeleccionada.dia && fecha.horaInicio === fechaHoraSeleccionada.horaInicio);
         if (fechaEncontrada) {
           const nuevasFechas = fechasSeleccionadas.filter((fecha) => fecha !== fechaEncontrada);
+          if(fechaEncontrada){
+          }
           setFechasSeleccionadas(nuevasFechas);
           console.log('Fechas Seleccionadas:', nuevasFechas);
           return;
         }
+
         setFechasSeleccionadas([...fechasSeleccionadas, fechaHoraSeleccionada]);
         console.log('Fechas Seleccionadas:', [...fechasSeleccionadas, fechaHoraSeleccionada]);
         return fechasSeleccionadas;
-  };
+};
 
 // Funcion para renderizar un item de la lista de horas
   const renderItemHour = ({ item }) => {
     const startHour = item.startHour < 10 ? `0${item.startHour}` : item.startHour;
     const isBooked = bookedHours.find(booking => booking.active === "1" && booking.event_start === `${item.startHour}`);
     const hourStyle = isBooked ? styles.inactiveHour : styles.activeHour;
+    const isSelectHour = fechasSeleccionadas.find((fecha) => fecha.horaInicio === `${startHour}:00:00`);
+    const selectedHour =  isSelectHour ? styles.selectedHour  : null;
+    const ColorSelectedHour = isSelectHour ? styles.ColorSelected : null;
     return (
-  <Pressable onPress={() => handlePress(item)} disabled={bookedHours.active === "1"}>
-      <View style={styles.hourContainer}>
-        <Text style={[styles.cardHour, hourStyle ]}>
-          {item.startHour}:00 - {item.endHour}:00
-        </Text>
-        {isBooked ?
+  <Pressable onPress={() => handlePress(item)} disabled={bookedHours.active === "1"} >
+      <View style={[styles.hourContainer, selectedHour]}>
+      {isSelectHour ? <Text style={[styles.cardHour, hourStyle, ColorSelectedHour]}>{item.startHour}:00 - {item.endHour}:00</Text> 
+      : <Text style={[styles.cardHour, hourStyle]}>{item.startHour}:00 - {item.endHour}:00</Text> }
+        {isBooked || selectedHour ?
             <View style={ styles.tagbookedContainer}>
               <Text style={[styles.tagbooked,styles.tagbookedText]}>Reservado</Text>
             </View>
@@ -258,6 +299,29 @@ const setSelectDayAndCurrentDay = (selectedDate) => {
     />
   )
   };
+  const renderTypeBooking = () => {
+     const typeBookingCard =  typeBooking.map((booking, index) => {
+      if (booking === 'JORNADA 4 HORAS' || booking === '1 HORA') {
+        return (
+            <Pressable key={index} onPress={()=> typeBookingHandler(booking)}
+            style={[styles.typeBookingStyle, booking === selectedButton ? styles.selectedButton : null]}>
+              <Text style={styles.textTypeBooking}>{booking}</Text>
+            </Pressable>
+        );
+      }
+    });
+    return (
+      <View style={styles.typeBookingContainer}>
+        {typeBookingCard}
+      </View>
+    )
+    }
+
+const typeBookingHandler = (booking) => {
+  setSelectedButton(booking);
+  setButtonPressed(true);
+  setShowRenderHour(true);
+}
 
   const renderHours = () => {
     const hours = generateHours();
@@ -290,7 +354,7 @@ const setSelectDayAndCurrentDay = (selectedDate) => {
 <SafeAreaView>
     <View style={styles.ZoneImage}>
     {
-         imgSrc() && <ImageBackground source={{ uri: imgSrc() }} style={styles.backgroundProduct} />
+      imgSrc() && <ImageBackground source={{ uri: imgSrc() }} style={styles.backgroundProduct} />
     }
     </View>
     <View style={styles.ZoneCalendar}>
@@ -328,9 +392,18 @@ const setSelectDayAndCurrentDay = (selectedDate) => {
           />
         </View>
             {renderDays()}
+            { renderTypeBooking() && ShowTypeBooking ? (
+              loading ? <Loading/> :
+              <View>
+                <Text style={[styles.titleHours]}>TIPO DE RESERVA</Text>
+                {renderTypeBooking()}
+              </View>
+            ) : null
+            }
           <View>
-          <Text style={[styles.titleHours]}>HORAS DISPONIBLES</Text>
-            {loading ? <Loading/> : renderHours()}
+          {
+              ShowRenderHour ?  ( LoadingHours ? <Loading/> : <View><Text style={[styles.titleHours]}>HORAS DISPONIBLES</Text>{renderHours()}</View>) : null
+          }
           </View>
     </View>
 </SafeAreaView>
@@ -348,7 +421,7 @@ const styles = StyleSheet.create({
     marginTop: 100,
   },
   hourContainer: {
-    position:'relative', 
+    position:'relative',
     width: 180,
     padding: 20,
     margin: 5,
@@ -428,15 +501,15 @@ containerSelected: {
     alignSelf: 'center',
   },
   activeHour: {
-    color: 'green', 
+    color: 'green',
   },
   inactiveHour: {
 
-    color: 'red', 
+    color: 'red',
   },
   disabledButton: {
 
-    opacity: 0.5, 
+    opacity: 0.5,
     backgroundColor: '#e0e0e0',
   },
   tagbookedContainer: {
@@ -458,10 +531,10 @@ containerSelected: {
     borderTopLeftRadius: 8,
   },
   tagbooked: {
-    backgroundColor: 'red', 
+    backgroundColor: 'red',
   },
   tagAvaliblebooked: {
-    backgroundColor: 'green', 
+    backgroundColor: 'green',
   },
   tagbookedText: {
     color: 'white',
@@ -474,6 +547,28 @@ containerSelected: {
   selectedHour: {
     backgroundColor: '#A168DE',
   },
+  ColorSelected: {
+    color: 'red',
+  },
+  typeBookingStyle: {
+    padding: 20,
+    margin: 5,
+    borderRadius: 8,
+    backgroundColor: '#e0e0e0',
+    alignItems: 'center',
+  },
+  typeBookingContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  textTypeBooking: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  selectedButton: {
+    backgroundColor: '#A168DE',
+  }
   });
 
 export default Calendar;
