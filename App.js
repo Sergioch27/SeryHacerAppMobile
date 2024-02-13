@@ -1,29 +1,16 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import Navigator from "./Navigation/Navigator"
 import React from 'react';
-import {
-  Button,
-  Alert,
-} from 'react-native';
+import ProductsList from "./src/components/ProductList";
+import store from './src/app/store'
+import { Provider } from 'react-redux'
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text>Esta sera mi App</Text>
-      <Button
-        title="PRESIONAME"
-        onPress={() => Alert.alert('MI PRIMER BOTON')}
-      />
-      <StatusBar style="auto" />
-    </View>
+    <>
+    <Provider store={store}>
+        <Navigator/>
+          {/* <ProductsList /> */}
+    </Provider>
+    </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

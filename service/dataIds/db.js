@@ -1,0 +1,1 @@
+export const LinkDB = 'https://seryhacer-mobile-app-default-rtdb.firebaseio.com/';
