@@ -8,16 +8,6 @@ import { useNavigation } from '@react-navigation/native';
 import { GetHours } from '../../service/wp_service';
 
 
-/**
- * Calendar component for selecting dates and hours.
- */
-/**
- * Calendar component for selecting dates and hours.
- * @returns {JSX.Element} The rendered Calendar component.
- */
-/**
- * Calendar component for selecting dates and hours.
- */
 const Calendar = () => {
   const route = useRoute();
   const { productItem } = route.params
@@ -63,10 +53,6 @@ const Calendar = () => {
   const [ButtonPressed, setButtonPressed] = useState(false);
   const [LoadingHours, setLoadingHours] = useState(false);
 
-  /**
-   * Returns the source of the image for the product.
-   * @returns {string} The source of the image.
-   */
   const imgSrc = ()=>{
     if (Array.isArray(productItem) && productItem.length > 0) {
       return productItem[0].image.src ;
@@ -74,10 +60,6 @@ const Calendar = () => {
       return   productItem.images[0].src ;
     }
   }
-/**
- * Returns the name of the product.
- * @returns {string} The name of the product.
- */
 const ProductName = ()  => {
   if(Array.isArray(productItem) && productItem.length > 0) {
     return productItem[0].parent_data.name;
@@ -135,9 +117,8 @@ useEffect(()=>{
 
 useEffect(() => {
   const dateSelected = () => {
-    setLoading(true);
-    setShowRenderHour(false);
-    setSelectedButton(null);
+  setLoading(true);
+  setShowRenderHour(false);
   const horas = generateHours();
   const selectedDate = new Date(selectYear, selectMonth, currentDay ? currentDay.getDate() : selectDay.getDate());
   console.log('DIA: ', selectedDate);
@@ -147,7 +128,6 @@ useEffect(() => {
       BookID: formBookingValue,
   }
   ];
-
   horas.forEach((hora) => {
     const fechaHoraSeleccionada = {
       año: selectedDate.getFullYear(),
@@ -161,6 +141,7 @@ useEffect(() => {
   console.log('Fechas y Horas Seleccionadas:', fechasYHorasSeleccionadas);
   return fechasYHorasSeleccionadas;
   };
+  setLoading(false);
   if((selectDay || currentDay) && !hasExecuted) {
     const CheckHour = dateSelected();
     GetHours(CheckHour).then((res) => {
@@ -172,10 +153,9 @@ useEffect(() => {
       console.log('Horas Disponibles:', BookedEvent);
       setBookedHours(BookedEvent);
       setShowTypeBooking(true);
-      setLoading(false);
-
     });
     setHasExecuted(true);
+
   }
   if (selectDay) {
     setHasExecuted(false);
@@ -217,7 +197,6 @@ const setSelectDayAndCurrentDay = (selectedDate) => {
 
 // Función para manejar el evento de presionar un item de la lista de horas
   const handlePress = (item) => {
-    console.log('FUNCIONO', item.startHour, item.endHour, item.date);
       const fechaHoraSeleccionada = {
         año: item.date.getFullYear(),
         mes: item.date.getMonth() + 1,
@@ -300,7 +279,7 @@ const setSelectDayAndCurrentDay = (selectedDate) => {
   )
   };
   const renderTypeBooking = () => {
-     const typeBookingCard =  typeBooking.map((booking, index) => {
+  const typeBookingCard =  typeBooking.map((booking, index) => {
       if (booking === 'JORNADA 4 HORAS' || booking === '1 HORA') {
         return (
             <Pressable key={index} onPress={()=> typeBookingHandler(booking)}
@@ -336,7 +315,6 @@ const typeBookingHandler = (booking) => {
       </View>
     );
   };
-
     navigation.setOptions({
     headerTransparent: true,
     headerLeft: ()=>(
@@ -392,17 +370,17 @@ const typeBookingHandler = (booking) => {
           />
         </View>
             {renderDays()}
-            { renderTypeBooking() && ShowTypeBooking ? (
+            { typeBooking.length > 0 && renderTypeBooking() && ShowTypeBooking ? (
               loading ? <Loading/> :
               <View>
                 <Text style={[styles.titleHours]}>TIPO DE RESERVA</Text>
                 {renderTypeBooking()}
               </View>
-            ) : null
+            ) : (<View><Text style={[styles.titleHours]}>HORAS DISPONIBLES</Text>{renderHours()}</View>)
             }
           <View>
           {
-              ShowRenderHour ?  ( LoadingHours ? <Loading/> : <View><Text style={[styles.titleHours]}>HORAS DISPONIBLES</Text>{renderHours()}</View>) : null
+            ShowRenderHour ?  (  LoadingHours ? <Loading/> : <View><Text style={[styles.titleHours]}>HORAS DISPONIBLES</Text>{renderHours()}</View>) : null
           }
           </View>
     </View>
