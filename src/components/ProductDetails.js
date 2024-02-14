@@ -141,7 +141,6 @@ useEffect(() => {
   console.log('Fechas y Horas Seleccionadas:', fechasYHorasSeleccionadas);
   return fechasYHorasSeleccionadas;
   };
-  setLoading(false);
   if((selectDay || currentDay) && !hasExecuted) {
     const CheckHour = dateSelected();
     GetHours(CheckHour).then((res) => {
@@ -153,6 +152,7 @@ useEffect(() => {
       console.log('Horas Disponibles:', BookedEvent);
       setBookedHours(BookedEvent);
       setShowTypeBooking(true);
+      setLoading(false);
     });
     setHasExecuted(true);
 
@@ -178,6 +178,7 @@ return hours.map((hour)=>({
 const setSelectDayAndCurrentDay = (selectedDate) => {
   setBookedHours([{}]);
   setHasExecuted(false);
+  setSelectedButton(null);
     if (!isSameDay(selectedDate, currentDay)) {
       setSelectDay(selectedDate);
     }
@@ -376,7 +377,7 @@ const typeBookingHandler = (booking) => {
                 <Text style={[styles.titleHours]}>TIPO DE RESERVA</Text>
                 {renderTypeBooking()}
               </View>
-            ) : (<View><Text style={[styles.titleHours]}>HORAS DISPONIBLES</Text>{renderHours()}</View>)
+            ) : ( loading ? <Loading/> : <View><Text style={[styles.titleHours]}>HORAS DISPONIBLES</Text>{renderHours()}</View>)
             }
           <View>
           {
