@@ -7,7 +7,7 @@ Descripción corta o tagline del proyecto.
 ## Contenido
 
 - [Descripción](#descripción)
-- [Capturas de pantalla](#capturas-de-pantalla)
+- [Capturas de pantalla](#captura-de-pantalla)
 - [Instalación](#instalación)
 
 ## Descripción
