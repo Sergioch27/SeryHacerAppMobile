@@ -17,16 +17,16 @@ Aplicación Mobile, para Android y IOS, perteneciente a Servicio se Psicologia S
 ## Captura de Pantalla 
 
 Login:
-![Lista de Productos](https://www.espacioseryhacer.com/wp-content/uploads/2024/02/Screenshot_1707931993.png){width=20%}
+![Lista de Productos](https://www.espacioseryhacer.com/wp-content/uploads/2024/02/Screenshot_1707931993.png)
 
 Lista de Productos:
-![Lista de Productos](https://www.espacioseryhacer.com/wp-content/uploads/2024/02/Screenshot_1707932011.png){width=20%}
+![Lista de Productos](https://www.espacioseryhacer.com/wp-content/uploads/2024/02/Screenshot_1707932011.png)
 
 Detalle de producto:
-![detalleProducto](https://www.espacioseryhacer.com/wp-content/uploads/2024/02/Screenshot_1707932021.png){width=20%}
+![detalleProducto](https://www.espacioseryhacer.com/wp-content/uploads/2024/02/Screenshot_1707932021.png)
 
 Detalle de reservas:
-![reservas](https://www.espacioseryhacer.com/wp-content/uploads/2024/02/Screenshot_1708103964.png){width=20%}
+![reservas](https://www.espacioseryhacer.com/wp-content/uploads/2024/02/Screenshot_1708103964.png)
 
 ## Instalación
 
