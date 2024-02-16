@@ -14,7 +14,7 @@ Descripción corta o tagline del proyecto.
 
 Aplicación Mobile, para Android y IOS, perteneciente a Servicio se Psicologia Ser y Hacer Ltda. para la gestion y reservas de Box para psicologo, esta como ampliación y mejora al sistema actual web, donde ambas plataforma estan conectadas.
 
-##Captura de Pantalla 
+## Captura de Pantalla 
 
 Login:
 
