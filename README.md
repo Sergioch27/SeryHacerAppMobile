@@ -2,8 +2,6 @@
 Aplicacion mobile de Ser y Hacer (react native)
 # Espacio Ser y Hacer App IOS & Android
 
-Descripción corta o tagline del proyecto.
-
 ## Contenido
 
 - [Descripción](#descripción)
