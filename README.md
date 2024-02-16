@@ -34,16 +34,16 @@ Requisitos Previos:
 
 Asegúrate de tener Node.js y npm instalados.
 
+```markdown
+git clone https://github.com/Sergioch27/SeryHacerAppMobile.git
+cd tu-proyecto
+```
 -Instalar Dependencias:
 
 ```markdown
 npm install
 ```
 
-```markdown
-git clone https://github.com/Sergioch27/SeryHacerAppMobile.git
-cd tu-proyecto
-```
 - Consideraciones finales:
 
 La App esta en proceso de desarrollo pertenece a un sistema completo de reservas de Box para uso por psicólogos. 
