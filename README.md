@@ -1,6 +1,6 @@
-# seryhacer_mobile_app
+
 Aplicacion mobile de Ser y Hacer (react native)
-# Nombre del Proyecto
+# Espacio Ser y Hacer App IOS & Android
 
 Descripción corta o tagline del proyecto.
 
