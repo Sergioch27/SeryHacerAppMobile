@@ -47,7 +47,7 @@ const RecoveryForm = () => {
     const requiredFields = {
         1: ['email'],
         2: ['code'],
-        3: ['user_pass'],
+        3: ['password'],
     };
         const currentFields = requiredFields[currentStep];
         if(currentFields.every(field => typeof form[field] === 'string' && form[field].trim() !== '')) {
@@ -88,24 +88,20 @@ const handleRecoverEmail = async () => {
   finally{
       setLoading(false);
 }
-    setCurrentStep(currentStep + 1);
   } else {
     setIsModalVisible(true);
   }
 }
 
 const handleRecoverCode = () => {
+  console.log(form)
   if(validateFields()){
     const fullCode = `${input1Ref.current.value}${input2Ref.current.value}${input3Ref.current.value}${input4Ref.current.value}`;
+    setForm({...form, code: fullCode});
     console.log(fullCode)
     try {
       setLoading(true);
       const email = form.email;
-      const code = {
-        code: fullCode,
-        email: email,
-        password: "",
-      };
     const DataRecover = validateCode( email, fullCode);
     console.log('Se envió con éxito', DataRecover);
     console.log(DataRecover.message);
@@ -116,7 +112,6 @@ const handleRecoverCode = () => {
   finally{
       setLoading(false);
 }
-    setCurrentStep(currentStep + 1);
   } else {
     setIsModalVisible(true);
   }
@@ -162,36 +157,39 @@ const renderFormInputs = () => {
     );
   } else if(currentStep === 2){
     return (
-      <View style={styles.contentInput}>
+      <>
+      <View style={styles.contentCod}>
       <TextInput
-        style={styles.input}
+        style={styles.inputCode}
         keyboardType="numeric"
         maxLength={1}
         onChangeText={(text) => handleTextChange(text, 1)}
         ref={input1Ref}
       />
       <TextInput
-        style={styles.input}
+        style={styles.inputCode}
         keyboardType="numeric"
         maxLength={1}
         onChangeText={(text) => handleTextChange(text, 2)}
         ref={input2Ref}
       />
       <TextInput
-        style={styles.input}
+        style={styles.inputCode}
         keyboardType="numeric"
         maxLength={1}
         onChangeText={(text) => handleTextChange(text, 3)}
         ref={input3Ref}
       />
       <TextInput
-        style={styles.input}
+        style={styles.inputCode}
         keyboardType="numeric"
         maxLength={1}
         onChangeText={(text) => handleTextChange(text, 4)}
         ref={input4Ref}
       />
-      <Pressable  onPress={handleRecoverCode}>
+    </View>
+    <View>
+    <Pressable  onPress={handleRecoverCode}>
         {
           <View style={styles.contentText}>
               <Text style={styles.buttonLogin}>{textButton()}</Text>
@@ -199,6 +197,7 @@ const renderFormInputs = () => {
         }
       </Pressable>
     </View>
+      </>
     );
   } else {
     return (
@@ -258,6 +257,18 @@ const styles = StyleSheet.create({
     padding: 10,
     shadowColor: "#000000",
 },
+inputCode: {
+  height: 60,
+  width: 60,
+  margin: 15,
+  borderWidth: 2,
+  borderRadius:10,
+  padding: 10,
+  shadowColor: "#000000",
+  fontSize: 30,
+  fontWeight: '500',
+  textAlign: 'center',
+},
 buttonLogin:{
   height: 40,
   width: 100,
@@ -291,6 +302,11 @@ text:{
   marginTop: 30,
   fontSize: 20,
   fontWeight: '500',
+},
+contentCod:{
+  flexDirection: 'row',
+  justifyContent: 'center',
+  alignItems: 'center',
 },
 });
 
