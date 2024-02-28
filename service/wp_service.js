@@ -93,8 +93,9 @@ const RecoverPassword = async (email)=>{
     }
 }
 const validateCode = async (email, code)=>{
+    console.log(email, code);
     try {
-        const DataCode = await axios.post( ApiType() + 'bdpwr/v1/validate-code', {
+        const DataCode = await axios.post( await ApiType() + 'bdpwr/v1/validate-code', {
             email,
             code
         });

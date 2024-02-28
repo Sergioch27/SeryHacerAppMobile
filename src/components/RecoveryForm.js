@@ -3,6 +3,8 @@ import { View, TextInput, Pressable, StyleSheet, Text, Image, SafeAreaView} from
 import { RecoverPassword, validateCode, passwordRecover } from '../../service/wp_service';
 import { ModalViewLogin } from './smart_components/Modals';
 import Loading from './smart_components/Loading';
+import { OtpInput } from 'react-native-otp-entry';
+
 
 const RecoveryForm = () => {
   const [form, setForm] = useState({
@@ -13,33 +15,34 @@ const RecoveryForm = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const input1Ref = useRef(null);
-  const input2Ref = useRef(null);
-  const input3Ref = useRef(null);
-  const input4Ref = useRef(null);
+  // const input1Ref = useRef(null);
+  // const input2Ref = useRef(null);
+  // const input3Ref = useRef(null);
+  // const input4Ref = useRef(null);
 
 
   const closeModal = () => {
     setIsModalVisible(false);
   };
 
-  const handleTextChange = (text, index) => {
-    if (text.length === 1) {
-      switch (index) {
-        case 1:
-          input2Ref.current.focus();
-          break;
-        case 2:
-          input3Ref.current.focus();
-          break;
-        case 3:
-          input4Ref.current.focus();
-          break;
-        default:
-          break;
-      }
-    }
-  };
+  // const handleTextChange = (text, index) => {
+  //   if (text.length === 1) {
+  //     switch (index) {
+  //       case 1:
+  //         input2Ref.current.focus();
+  //         break;
+  //       case 2:
+  //         input3Ref.current.focus();
+  //         break;
+  //       case 3:
+  //         input4Ref.current.focus();
+  //         break;
+  //       default:
+  //         break;
+  //     }
+  //   }
+  // };
+
   const images = [
     { logo: require('../../assets/logotipo.png') },
   ];
@@ -93,16 +96,13 @@ const handleRecoverEmail = async () => {
   }
 }
 
-const handleRecoverCode = () => {
+const handleRecoverCode = async () => {
   console.log(form)
   if(validateFields()){
-    const fullCode = `${input1Ref.current.value}${input2Ref.current.value}${input3Ref.current.value}${input4Ref.current.value}`;
-    setForm({...form, code: fullCode});
-    console.log(fullCode)
     try {
       setLoading(true);
       const email = form.email;
-    const DataRecover = validateCode( email, fullCode);
+    const DataRecover = await validateCode( email, form.code);
     console.log('Se envió con éxito', DataRecover);
     console.log(DataRecover.message);
       setCurrentStep(currentStep + 1);
@@ -159,34 +159,18 @@ const renderFormInputs = () => {
     return (
       <>
       <View style={styles.contentCod}>
-      <TextInput
-        style={styles.inputCode}
-        keyboardType="numeric"
-        maxLength={1}
-        onChangeText={(text) => handleTextChange(text, 1)}
-        ref={input1Ref}
-      />
-      <TextInput
-        style={styles.inputCode}
-        keyboardType="numeric"
-        maxLength={1}
-        onChangeText={(text) => handleTextChange(text, 2)}
-        ref={input2Ref}
-      />
-      <TextInput
-        style={styles.inputCode}
-        keyboardType="numeric"
-        maxLength={1}
-        onChangeText={(text) => handleTextChange(text, 3)}
-        ref={input3Ref}
-      />
-      <TextInput
-        style={styles.inputCode}
-        keyboardType="numeric"
-        maxLength={1}
-        onChangeText={(text) => handleTextChange(text, 4)}
-        ref={input4Ref}
-      />
+      <OtpInput
+  numberOfDigits={4}
+  focusColor="green"
+  focusStickBlinkingDuration={500}
+  onTextChange={(text) => console.log(text)}
+  onFilled={(text) => {setForm({...form, code: text}); console.log(form)}}
+  theme={{
+   pinCodeContainerStyle: styles.inputCode,
+   pinCodeTextStyle: styles.inputCode,
+   focusStickStyle: styles.focusStick,
+  }}
+/>
     </View>
     <View>
     <Pressable  onPress={handleRecoverCode}>
@@ -307,6 +291,11 @@ contentCod:{
   flexDirection: 'row',
   justifyContent: 'center',
   alignItems: 'center',
+},
+focusStick: {
+  backgroundColor: 'green',
+  height: 2,
+  width: 10,
 },
 });
 
