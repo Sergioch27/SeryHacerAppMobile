@@ -121,7 +121,7 @@ const handleRecoverPassword = () => {
   if (validateFields()) {
     try {
       setLoading(true);
-      const DataRecover = passwordRecover(email, code, password);
+      const DataRecover = passwordRecover(form.email, form.code, form.password);
       console.log('Se envió con éxito', DataRecover);
       console.log(DataRecover.message);
       setCurrentStep(currentStep + 1);

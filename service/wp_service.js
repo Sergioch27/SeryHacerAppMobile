@@ -107,9 +107,13 @@ const validateCode = async (email, code)=>{
     }
 }
 
-const passwordRecover = async (form)=>{
+const passwordRecover = async (email, code, password)=>{
     try {
-        const DataRecover = await axios.post( ApiType() + 'bdpwr/v1/reset-password', form);
+        const DataRecover = await axios.post( await ApiType() + 'bdpwr/v1/set-password', {
+            email,
+            code,
+            password
+        });
         return DataRecover.data;
     }
     catch (err){
