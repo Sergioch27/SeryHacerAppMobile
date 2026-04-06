@@ -4,7 +4,7 @@ import ProfileForm from '../components/ProfileForm'
 
 const ProfileView = () => {
   return (
-    <SafeAreaView>
+    <SafeAreaView style={{ flex: 1 }}>
       <ProfileForm />
     </SafeAreaView>
   )

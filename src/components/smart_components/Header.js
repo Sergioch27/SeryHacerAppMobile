@@ -7,12 +7,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSelector, useDispatch } from "react-redux";
 import { setModal3 } from "../../features/modal/modalSlice";
 import {ModalLoginOut} from '../smart_components/Modals';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const Header = () => {
 
     const dispatch = useDispatch();
     const isModalVisible3 = useSelector((state) => state.modal.modal3.isOpen);
     const navigation = useNavigation();
+    const insets = useSafeAreaInsets();
 
     const images = [
         { logo: require('../../../assets/logotipo.png') },
@@ -38,19 +40,20 @@ const Header = () => {
 
   return (
     <>
-    <View style={styles.contentImage} >
-    <Pressable onPress={()=> dispatch(setModal3(!isModalVisible3))}>
-      <View style={styles.LoginOutUser}>
-      <AntDesign name="logout" size={24} color="#A168DE" />
-        <Text style={styles.textIcon}>
-          SALIR
-        </Text>
+    <View style={[styles.contentImage, { paddingTop: insets.top + 8 }]}>
+      <View style={styles.headerRow}>
+        <View style={styles.headerSpacer} />
+        <Image
+            style={styles.imageLogo}
+            source={images[0].logo}
+        />
+        <Pressable onPress={()=> dispatch(setModal3(!isModalVisible3))} style={styles.logoutButton}>
+          <AntDesign name="logout" size={24} color="#A168DE" />
+          <Text style={styles.textIcon}>
+            SALIR
+          </Text>
+        </Pressable>
       </View>
-    </Pressable>
-    <Image
-        style={styles.imageLogo}
-        source={images[0].logo}
-    />
     </View>
     <ModalLoginOut
         isVisible={isModalVisible3}
@@ -67,21 +70,26 @@ const Header = () => {
 
 const styles = StyleSheet.create({
     contentImage: {
-        alignItems: "center",
-        height: 100,
-        marginTop: 50,
+        paddingHorizontal: 20,
+        paddingBottom: 12,
+      },
+    headerRow: {
+        minHeight: 92,
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+      },
+    headerSpacer: {
+        width: 56,
       },
     imageLogo:{
-            bottom: 60,
-            width:300,
-            height:110,
+            width:220,
+            height:82,
+            resizeMode: 'contain',
     },
-    LoginOutUser:{
-        width: 50,
+    logoutButton:{
+        width: 56,
         alignItems: "center",
-        alignSelf: 'flex-end',
-        marginLeft: 320,
-        bottom: 30,
       },
       textIcon:{
         marginTop: 5,

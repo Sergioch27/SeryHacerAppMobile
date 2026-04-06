@@ -1,16 +1,20 @@
-import axios from 'axios';
+﻿import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
+  LoginDataUser,
   LoginOutUser,
   LoginRequest,
-  RegisterRequest,
-  RecoverPassword,
   LoginRequestDev,
-  LoginSuperUser,
+  RecoverPassword,
+  RegisterRequest,
 } from './wp_service';
 
 jest.mock('axios');
 jest.mock('@react-native-async-storage/async-storage');
+
+beforeEach(() => {
+  jest.clearAllMocks();
+});
 
 describe('LoginOutUser', () => {
   it('should remove user_token from AsyncStorage', async () => {
@@ -78,7 +82,7 @@ describe('RecoverPassword', () => {
 
     const result = await RecoverPassword(email);
 
-    expect(axios.post).toHaveBeenCalledWith(expect.any(String), { user_login: email });
+    expect(axios.post).toHaveBeenCalledWith(expect.any(String), { email });
     expect(result).toEqual(responseData);
   });
 
@@ -118,22 +122,22 @@ describe('LoginRequestDev', () => {
   });
 });
 
-describe('LoginSuperUser', () => {
-  it('should make a request to check if the user is a super admin', async () => {
+describe('LoginDataUser', () => {
+  it('should fetch the current user and persist user_id', async () => {
     const token = 'testtoken';
-    const isSuperAdmin = true;
-    const responseData = { is_super_admin: isSuperAdmin };
+    const responseData = { id: 7, name: 'Admin' };
 
     axios.get.mockResolvedValueOnce({ data: responseData });
 
-    const result = await LoginSuperUser(token);
+    const result = await LoginDataUser(token);
 
-    expect(axios.get).toHaveBeenCalledWith(expect.stringContaining('https://test.espacioseryhacer.com/wp-json/'), {
+    expect(axios.get).toHaveBeenCalledWith(expect.stringContaining('/wp/v2/users/me'), {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
-    expect(result).toEqual(isSuperAdmin);
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith('user_id', '7');
+    expect(result).toEqual(responseData);
   });
 
   it('should throw an error if there is an error during the request', async () => {
@@ -142,6 +146,7 @@ describe('LoginSuperUser', () => {
 
     axios.get.mockRejectedValueOnce(error);
 
-    await expect(LoginSuperUser(token)).rejects.toThrow(error);
+    await expect(LoginDataUser(token)).rejects.toThrow(error);
   });
 });
+

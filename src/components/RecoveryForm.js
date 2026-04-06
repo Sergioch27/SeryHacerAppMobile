@@ -4,6 +4,7 @@ import { RecoverPassword, validateCode, passwordRecover } from '../../service/wp
 import { ModalViewLogin } from './smart_components/Modals';
 import Loading from './smart_components/Loading';
 import { OtpInput } from 'react-native-otp-entry';
+import { set } from 'date-fns';
 
 
 const RecoveryForm = () => {
@@ -14,7 +15,10 @@ const RecoveryForm = () => {
   });
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isModalVisible1, setIsModalVisible1] = useState(false);
+  const [isModalVisible2, setIsModalVisible2] = useState(false);
+  const [isModalVisible3, setIsModalVisible3] = useState(false);
+
   // const input1Ref = useRef(null);
   // const input2Ref = useRef(null);
   // const input3Ref = useRef(null);
@@ -22,26 +26,9 @@ const RecoveryForm = () => {
 
 
   const closeModal = () => {
-    setIsModalVisible(false);
+    setIsModalVisible1(false);
   };
 
-  // const handleTextChange = (text, index) => {
-  //   if (text.length === 1) {
-  //     switch (index) {
-  //       case 1:
-  //         input2Ref.current.focus();
-  //         break;
-  //       case 2:
-  //         input3Ref.current.focus();
-  //         break;
-  //       case 3:
-  //         input4Ref.current.focus();
-  //         break;
-  //       default:
-  //         break;
-  //     }
-  //   }
-  // };
 
   const images = [
     { logo: require('../../assets/logotipo.png') },
@@ -92,7 +79,7 @@ const handleRecoverEmail = async () => {
       setLoading(false);
 }
   } else {
-    setIsModalVisible(true);
+    setIsModalVisible1(true);
   }
 }
 
@@ -103,9 +90,16 @@ const handleRecoverCode = async () => {
       setLoading(true);
       const email = form.email;
     const DataRecover = await validateCode( email, form.code);
-    console.log('Se envió con éxito', DataRecover);
-    console.log(DataRecover.message);
-      setCurrentStep(currentStep + 1);
+    console.log('Se envió con éxito', DataRecover.data.status);
+    if (DataRecover.data.status === 200) {
+      console.log(DataRecover.message);
+      setIsModalVisible2(true);
+      setCurrentStep(currentStep + 1)
+      setIsModalVisible2(false);
+    } else {
+      setIsModalVisible3(true);
+      console.log(DataRecover.message);
+    }
   } catch (err) {
     console.error('Error de envió', err);
   }
@@ -113,17 +107,16 @@ const handleRecoverCode = async () => {
       setLoading(false);
 }
   } else {
-    setIsModalVisible(true);
+    setIsModalVisible1(true);
   }
 }
 
-const handleRecoverPassword = () => {
+const handleRecoverPassword = async () => {
   if (validateFields()) {
     try {
       setLoading(true);
-      const DataRecover = passwordRecover(form.email, form.code, form.password);
-      console.log('Se envió con éxito', DataRecover);
-      console.log(DataRecover.message);
+      const DataRecover = await passwordRecover(form);
+      console.log('Se envió con éxito', DataRecover.message);
       setCurrentStep(currentStep + 1);
     } catch (err) {
       console.error('Error de envió', err);
@@ -133,7 +126,7 @@ const handleRecoverPassword = () => {
     }
     setCurrentStep(currentStep + 1);
   } else {
-    setIsModalVisible(true);
+    setIsModalVisible1(true);
   }
 }
 const renderFormInputs = () => {
@@ -222,11 +215,24 @@ return (
         </View>
     </SafeAreaView>
     <ModalViewLogin
-        isVisible={isModalVisible}
+        isVisible={isModalVisible1}
         onClose={closeModal}
-        textTitle="Por Favor, debe indicar correo electrónico"
+        textTitle="Por Favor, complete todos los campos"
         textButton="Cerrar"
     />
+        <ModalViewLogin
+        isVisible={isModalVisible2}
+        onClose={closeModal}
+        textTitle="Código de Validación Correcto"
+        textButton="Aceptar"
+    />
+        <ModalViewLogin
+        isVisible={isModalVisible3}
+        onClose={closeModal}
+        textTitle="Error en código de validación"
+        textButton="Cerrar"
+    />
+
     </>
 )
 };

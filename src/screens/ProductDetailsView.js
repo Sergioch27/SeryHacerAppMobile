@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native";
 const RecoverPasswordView = ()=>{
   return (
 
-    <SafeAreaView>
+    <SafeAreaView style={{ flex: 1 }}>
         <ProductDetails />
     </SafeAreaView>
   )

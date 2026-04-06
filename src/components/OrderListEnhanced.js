@@ -36,7 +36,7 @@ const statusMap = {
   refunded: 'Reembolsada',
 };
 
-const OrderList = () => {
+const OrderListEnhanced = () => {
   const [orderData, setOrderData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -46,30 +46,31 @@ const OrderList = () => {
   const navigation = useNavigation();
 
   const loadOrders = async (nextPage = 1, options = {}) => {
-      const { reset = false, isRefresh = false } = options;
-      try {
-        if (isRefresh) {
-          setRefreshing(true);
-        } else if (nextPage === 1) {
-          setLoading(true);
-        } else {
-          setLoadingMore(true);
-        }
-        setErrorMessage('');
+    const { reset = false, isRefresh = false } = options;
 
-        const data = await GetOder(nextPage);
-        setPage(nextPage);
-        setOrderData((prev) => (reset || nextPage === 1) ? data : [...prev, ...data]);
-        console.log('Ordenes', data);
-      } catch (err) {
-        console.error('Error al listar ordenes', err);
-        setErrorMessage('No se pudieron cargar las órdenes. Intenta nuevamente.');
-      } finally {
-        setLoading(false);
-        setLoadingMore(false);
-        setRefreshing(false);
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else if (nextPage === 1) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
       }
-    };
+
+      setErrorMessage('');
+      const data = await GetOder(nextPage);
+      setPage(nextPage);
+      setOrderData((prev) => (reset || nextPage === 1 ? data : [...prev, ...data]));
+      console.log('[OrderList] ordenes:', data);
+    } catch (err) {
+      console.error('Error al listar ordenes', err);
+      setErrorMessage('No se pudieron cargar las órdenes. Intenta nuevamente.');
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
     loadOrders(1, { reset: true });
@@ -118,6 +119,9 @@ const OrderList = () => {
     <View style={styles.container}>
       <Header />
       <View style={styles.contentList}>
+        <Pressable style={styles.couponsButton} onPress={() => navigation.navigate('CouponsView')}>
+          <Text style={styles.couponsButtonText}>Ver cupones</Text>
+        </Pressable>
         {loading ? (
           <View style={styles.loading}>
             <Loading />
@@ -132,7 +136,18 @@ const OrderList = () => {
             )}
             keyExtractor={(item) => item.id.toString()}
             contentContainerStyle={styles.listContent}
-            ListEmptyComponent={<Text style={styles.emptyText}>No hay órdenes para mostrar.</Text>}
+            onRefresh={() => loadOrders(1, { reset: true, isRefresh: true })}
+            refreshing={refreshing}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>{errorMessage || 'No hay órdenes para mostrar.'}</Text>
+                {errorMessage ? (
+                  <Pressable style={styles.retryButton} onPress={() => loadOrders(1, { reset: true, isRefresh: true })}>
+                    <Text style={styles.retryButtonText}>Reintentar</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            }
             ListFooterComponent={loadingMore ? <View style={styles.load}><Loading /></View> : null}
             onEndReached={loadMoreOrders}
             onEndReachedThreshold={0.2}
@@ -153,6 +168,18 @@ const styles = StyleSheet.create({
   contentList: {
     flex: 1,
     backgroundColor: 'transparent',
+  },
+  couponsButton: {
+    marginHorizontal: 20,
+    marginTop: 12,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: '#eee6f8',
+    alignItems: 'center',
+  },
+  couponsButtonText: {
+    color: '#6b3ba8',
+    fontWeight: '700',
   },
   listContent: {
     paddingHorizontal: 20,
@@ -222,15 +249,30 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#A168DE',
   },
-  emptyText: {
+  emptyContainer: {
     marginTop: 40,
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  emptyText: {
     textAlign: 'center',
     color: '#666666',
     fontSize: 16,
+  },
+  retryButton: {
+    marginTop: 16,
+    backgroundColor: '#A168DE',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+  },
+  retryButtonText: {
+    color: '#ffffff',
+    fontWeight: '700',
   },
   load: {
     marginTop: 20,
   },
 });
 
-export default OrderList;
+export default OrderListEnhanced;

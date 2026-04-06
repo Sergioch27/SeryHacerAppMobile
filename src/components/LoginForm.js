@@ -10,7 +10,8 @@ import {
   Pressable,
   SafeAreaView,
   Button,
-  Linking
+  Linking,
+  ScrollView,
 } from "react-native";
 import { LoginRequest, LoginRequestDev, LoginDataUser } from "../../service/wp_service";
 import Loading from "./smart_components/Loading";
@@ -18,6 +19,7 @@ import {ModalViewLogin, ModalViewDev} from "./smart_components/Modals";
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { useSelector, useDispatch } from "react-redux";
 import { setModal1, setModal2 } from "../features/modal/modalSlice";
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 
@@ -37,6 +39,7 @@ const LoginForm = ()=>{
   const isModalVisible2 = useSelector((state) => state.modal.modal2.isOpen);
 
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
 
 const LinkURl = 'https://www.espacioseryhacer.com/privacy-policy';
 const OpenURL = ({url, children}) =>{
@@ -181,7 +184,11 @@ const handleDev = async ()=>{
 
     return (
         <>
-        <SafeAreaView >
+        <SafeAreaView style={styles.safeArea}>
+          <ScrollView
+            contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, 24) + 24 }]}
+            showsVerticalScrollIndicator={false}
+          >
             <View style={styles.contentImage} >
             <Pressable onPress={handleLogoPress}>
             <Image
@@ -237,7 +244,8 @@ const handleDev = async ()=>{
                   <Text style={styles.TextSmall}>Al iniciar sesión o registrarte, aceptas los</Text>
                   <OpenURL url={LinkURl}>términos y políticas de privacidad</OpenURL>
                 </View>
-            </SafeAreaView>
+            </ScrollView>
+        </SafeAreaView>
             <ModalViewLogin
                 isVisible={isModalVisible1}
                 onClose={closeModal}
@@ -257,6 +265,13 @@ const handleDev = async ()=>{
     )
 }
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
   centeredView: {
     flex: 1,
     justifyContent: 'center',
@@ -290,23 +305,28 @@ const styles = StyleSheet.create({
     },
     contentImage: {
       alignItems: "center",
+      paddingHorizontal: 20,
     },
     imageLogo:{
       width:300,
       height:120,
+      resizeMode: 'contain',
     },
     contentInput:{
-      margin:30,
+      marginHorizontal:30,
+      marginTop:24,
       alignItems: "center",
     },
     contentText:{
-      margin:30,
+      marginHorizontal:30,
+      marginTop:24,
       justifyContent: "center",
       alignItems: "center",
     },
     textTitle:{
-      fontSize: 40,
+      fontSize: 34,
       fontWeight: '500',
+      textAlign: 'center',
     },
     buttonLogin:{
       height: 40,
@@ -351,6 +371,7 @@ const styles = StyleSheet.create({
     ContentTextSmall:{
       justifyContent: "center",
       alignItems: "center",
+      paddingHorizontal: 24,
     },
     TextSmall:{
       textAlign:"center",

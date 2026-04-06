@@ -2,6 +2,7 @@
   "expo": {
     "name": "SeryHacerAppMobile",
     "slug": "SeryHacerAppMobile",
+    "scheme": "seryhacerapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -9,8 +10,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff",
-      "opacity": 0.7
+      "backgroundColor": "#ffffff"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -21,8 +21,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff",
-        "opacity": 0.7
+        "backgroundColor": "#ffffff"
       }
     },
     "web": {

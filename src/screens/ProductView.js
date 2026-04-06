@@ -7,7 +7,7 @@ const ProductView = ()=>{
 
     return (
         <>
-            <SafeAreaView>
+            <SafeAreaView style={{ flex: 1 }}>
                 <ProductsList/>
             </SafeAreaView>
         </>
