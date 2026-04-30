@@ -158,6 +158,7 @@ const CheckoutFormIntegrated = () => {
       console.error('[CheckoutFormIntegrated] payment init error:', JSON.stringify({
         message: error?.message ?? null,
         code: error?.code ?? null,
+        stage: error?.stage ?? error?.details?.stage ?? null,
         status: error?.httpStatus ?? error?.response?.status ?? null,
         details: error?.details ?? error?.response?.data ?? null,
       }, null, 2));

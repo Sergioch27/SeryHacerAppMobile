@@ -1,30 +1,44 @@
-import React, { useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, AppState, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { AntDesign } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { WebView } from 'react-native-webview';
 import Loading from './smart_components/Loading';
 import { APP_SCHEME } from '../../service/mobile_reservation_models';
 
-const getQueryParam = (url, key) => {
-  if (!url || !key) {
+const getQueryParam = (url, keys) => {
+  const keyList = Array.isArray(keys) ? keys : [keys];
+
+  if (!url || keyList.length === 0) {
     return null;
   }
 
-  const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = url.match(new RegExp(`[?&]${escapedKey}=([^&#]+)`));
-  return match ? decodeURIComponent(match[1]) : null;
+  for (const key of keyList) {
+    const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const match = url.match(new RegExp(`[?&]${escapedKey}=([^&#]+)`, 'i'));
+
+    if (match) {
+      return decodeURIComponent(match[1]);
+    }
+  }
+
+  return null;
 };
 
 const getRouteParamsFromUrl = (url, fallbackExternalReference) => {
-  const tokenWs = getQueryParam(url, 'token_ws');
-  const externalReference = getQueryParam(url, 'external_reference') || fallbackExternalReference || null;
-  const status = getQueryParam(url, 'status') || (tokenWs ? 'success' : 'failed');
+  const tokenWs = getQueryParam(url, ['token_ws', 'token', 'TBK_TOKEN']);
+  const externalReference = getQueryParam(url, ['external_reference', 'externalReference'])
+    || fallbackExternalReference
+    || null;
+  const responseCode = getQueryParam(url, ['response_code', 'responseCode']);
+  const status = getQueryParam(url, ['status', 'estado'])
+    || (responseCode === '0' ? 'success' : null)
+    || (tokenWs ? 'success' : 'failed');
 
   return {
     token_ws: tokenWs,
     external_reference: externalReference,
+    response_code: responseCode,
     status,
   };
 };
@@ -33,16 +47,27 @@ const PaymentWebView = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
-  const webViewRef = useRef(null);
-  const [loading, setLoading] = useState(true);
-  const [currentUrl, setCurrentUrl] = useState('');
+  const hasOpenedPayment = useRef(false);
+  const hasNavigatedToResult = useRef(false);
+  const appState = useRef(AppState.currentState);
+  const [opening, setOpening] = useState(false);
   const { paymentUrl, external_reference: externalReference } = route.params ?? {};
 
   const initialUrl = useMemo(() => paymentUrl ?? '', [paymentUrl]);
 
   const navigateToResult = (url) => {
+    if (hasNavigatedToResult.current) {
+      return;
+    }
+
+    hasNavigatedToResult.current = true;
     const resultParams = getRouteParamsFromUrl(url, externalReference);
     navigation.replace('PaymentResultView', resultParams);
+  };
+
+  const verifyCurrentPayment = () => {
+    const url = `${APP_SCHEME}://payment-result?external_reference=${encodeURIComponent(externalReference ?? '')}`;
+    navigateToResult(url);
   };
 
   const handleClose = () => {
@@ -52,20 +77,52 @@ const PaymentWebView = () => {
     });
   };
 
-  const handleNavigationRequest = (request) => {
-    const url = request?.url ?? '';
-
-    if (!url) {
-      return true;
+  const openPaymentInBrowser = async () => {
+    if (!initialUrl || opening) {
+      return;
     }
 
-    if (url.startsWith(`${APP_SCHEME}://payment-result`)) {
-      navigateToResult(url);
-      return false;
+    try {
+      setOpening(true);
+      await Linking.openURL(initialUrl);
+    } catch {
+      Alert.alert('No se pudo abrir el pago', 'Intenta nuevamente.');
+    } finally {
+      setOpening(false);
     }
-
-    return true;
   };
+
+  useEffect(() => {
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      if (url?.startsWith(`${APP_SCHEME}://payment-result`)) {
+        navigateToResult(url);
+      }
+    });
+
+    return () => subscription.remove();
+  }, [externalReference, navigation]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      const wasAway = appState.current.match(/inactive|background/);
+      appState.current = nextAppState;
+
+      if (wasAway && nextAppState === 'active' && hasOpenedPayment.current) {
+        verifyCurrentPayment();
+      }
+    });
+
+    return () => subscription.remove();
+  }, [externalReference, navigation]);
+
+  useEffect(() => {
+    if (!initialUrl || hasOpenedPayment.current) {
+      return;
+    }
+
+    hasOpenedPayment.current = true;
+    openPaymentInBrowser();
+  }, [initialUrl]);
 
   if (!initialUrl) {
     return (
@@ -88,44 +145,22 @@ const PaymentWebView = () => {
         <View style={styles.headerSpacer} />
       </View>
 
-      <View style={styles.addressBar}>
-        <Text style={styles.addressText} numberOfLines={1}>
-          {currentUrl || initialUrl}
+      <View style={styles.content}>
+        {opening ? <Loading /> : null}
+        <Text style={styles.title}>Esperando resultado del pago</Text>
+        <Text style={styles.message}>
+          Completa la transaccion en el navegador. Cuando vuelvas desde Transbank, la app confirmara el pago y actualizara la reserva.
         </Text>
+        <Pressable style={styles.primaryButton} onPress={openPaymentInBrowser} disabled={opening}>
+          <Text style={styles.primaryButtonText}>{opening ? 'Abriendo...' : 'Abrir navegador'}</Text>
+        </Pressable>
+        <Pressable style={styles.verifyButton} onPress={verifyCurrentPayment}>
+          <Text style={styles.verifyButtonText}>Ya pague, verificar</Text>
+        </Pressable>
+        <Pressable style={styles.secondaryButton} onPress={handleClose}>
+          <Text style={styles.secondaryButtonText}>Cancelar pago</Text>
+        </Pressable>
       </View>
-
-      <WebView
-        ref={webViewRef}
-        source={{ uri: initialUrl }}
-        startInLoadingState
-        renderLoading={() => (
-          <View style={styles.loadingContainer}>
-            <Loading />
-            <Text style={styles.loadingText}>Cargando pasarela de pago...</Text>
-          </View>
-        )}
-        onLoadStart={() => setLoading(true)}
-        onLoadEnd={() => setLoading(false)}
-        onShouldStartLoadWithRequest={handleNavigationRequest}
-        onNavigationStateChange={(navState) => {
-          setCurrentUrl(navState.url);
-
-          if (navState.url?.startsWith(`${APP_SCHEME}://payment-result`)) {
-            navigateToResult(navState.url);
-          }
-        }}
-        onError={() => {
-          Alert.alert('No se pudo abrir el pago', 'Intenta nuevamente.');
-          handleClose();
-        }}
-      />
-
-      {loading ? (
-        <View style={styles.loadingBadge}>
-          <Loading />
-          <Text style={styles.loadingBadgeText}>Preparando pago...</Text>
-        </View>
-      ) : null}
     </View>
   );
 };
@@ -151,42 +186,49 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 28,
   },
-  addressBar: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#f0f2f5',
-    borderBottomWidth: 1,
-    borderBottomColor: '#d9dde3',
-  },
-  addressText: {
-    color: '#5a6472',
-    fontSize: 12,
-  },
-  loadingContainer: {
+  content: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ffffff',
+    paddingHorizontal: 24,
   },
-  loadingText: {
-    marginTop: 12,
+  title: {
+    marginTop: 18,
+    fontSize: 24,
+    fontWeight: '800',
+    textAlign: 'center',
+    color: '#222222',
+  },
+  message: {
+    marginTop: 14,
+    fontSize: 16,
+    lineHeight: 22,
+    textAlign: 'center',
     color: '#555555',
   },
-  loadingBadge: {
-    position: 'absolute',
-    right: 16,
-    bottom: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(17, 24, 39, 0.9)',
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+  primaryButton: {
+    marginTop: 28,
+    paddingHorizontal: 22,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#A168DE',
   },
-  loadingBadgeText: {
-    marginLeft: 10,
+  primaryButtonText: {
     color: '#ffffff',
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  verifyButton: {
+    marginTop: 12,
+    paddingHorizontal: 22,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#A168DE',
+    backgroundColor: '#ffffff',
+  },
+  verifyButtonText: {
+    color: '#6b3ba8',
+    fontWeight: '700',
   },
   emptyContainer: {
     flex: 1,

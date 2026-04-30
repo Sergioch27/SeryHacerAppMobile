@@ -14,12 +14,26 @@ const PaymentResult = () => {
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const paymentResult = useSelector((state) => state.cart.paymentResult);
-  const { token_ws: tokenWs, external_reference: externalReference, status } = route.params ?? {};
+  const {
+    token_ws: tokenWsParam,
+    token,
+    TBK_TOKEN: tbkToken,
+    external_reference: externalReferenceParam,
+    externalReference: externalReferenceAlias,
+    response_code: responseCodeParam,
+    responseCode,
+    status: statusParam,
+    estado,
+  } = route.params ?? {};
+  const tokenWs = tokenWsParam ?? token ?? tbkToken ?? null;
+  const externalReference = externalReferenceParam ?? externalReferenceAlias ?? null;
+  const responseCodeValue = responseCodeParam ?? responseCode ?? null;
+  const status = statusParam ?? estado ?? (responseCodeValue === '0' ? 'success' : null);
 
   useEffect(() => {
     dispatch(clearPaymentResult());
 
-    if (tokenWs) {
+    if (tokenWs || externalReference) {
       dispatch(confirmReservationPaymentFromReturn({
         tokenWs,
         externalReference,

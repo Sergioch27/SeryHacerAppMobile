@@ -1,20 +1,227 @@
-import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  TRANSBANK_API_KEY_SECRET,
-  TRANSBANK_COMMERCE_CODE,
-  TRANSBANK_COMMERCE_NAME,
-  TRANSBANK_COMMERCE_RUT,
-  TRANSBANK_MODE,
   normalizeTransbankConfirmResponse,
   normalizeTransbankInitResponse,
   parseApiError,
 } from './mobile_reservation_models';
-import { buildCheckoutCustomer } from './wp_service';
+import { appConfig } from './app_config';
+import { buildCheckoutCustomer, getPaymentConfirmationCallbackUrl } from './wp_service';
 
-const TRANSBANK_BASE_URL = 'https://pagospsicologos.duckdns.org';
+const TRANSBANK_PAYMENT_SERVICE_BASE_URL = appConfig.transbankBaseUrl || 'https://pago.espacioseryhacer.com';
+const TRANSBANK_BASE_URL = TRANSBANK_PAYMENT_SERVICE_BASE_URL;
+const TRANSBANK_CONFIRM_BASE_URL = TRANSBANK_PAYMENT_SERVICE_BASE_URL;
+const TRANSBANK_STATUS_PATH = '/estado_pago';
 const TRANSBANK_USER_TOKEN_KEY = '@seryhacer/transbank-user-token';
 const TRANSBANK_USER_TOKEN_EMAIL_KEY = '@seryhacer/transbank-user-token-email';
+
+const TRANSBANK_REQUEST_TIMEOUT = 15000;
+
+const maskSecret = (value) => {
+  if (!value || typeof value !== 'string') {
+    return null;
+  }
+
+  if (value.length <= 8) {
+    return '***';
+  }
+
+  return `${value.slice(0, 4)}...${value.slice(-4)}`;
+};
+
+const buildAxiosErrorLog = (error, extra = {}) => {
+  if (error?.details?.axios) {
+    return {
+      ...error.details.axios,
+      ...extra,
+      message: error?.message ?? error.details.axios.message ?? null,
+      code: error?.code ?? error.details.axios.code ?? null,
+      status: error?.httpStatus ?? error.details.axios.status ?? null,
+      data: error?.details?.axios?.data ?? null,
+      requestUrl: error?.details?.axios?.requestUrl ?? null,
+      method: error?.details?.axios?.method ?? null,
+      baseURL: error?.details?.axios?.baseURL ?? null,
+      params: error?.details?.axios?.params ?? null,
+      timeout: error?.details?.axios?.timeout ?? null,
+    };
+  }
+
+  const errorJson = typeof error?.toJSON === 'function' ? error.toJSON() : null;
+
+  return {
+    ...extra,
+    message: error?.message ?? null,
+    code: error?.code ?? errorJson?.code ?? null,
+    status: error?.response?.status ?? errorJson?.status ?? null,
+    data: error?.response?.data ?? null,
+    requestUrl: error?.config?.url ?? errorJson?.config?.url ?? null,
+    method: error?.config?.method ?? errorJson?.config?.method ?? null,
+    baseURL: error?.config?.baseURL ?? errorJson?.config?.baseURL ?? null,
+    params: error?.config?.params ?? errorJson?.config?.params ?? null,
+    timeout: error?.config?.timeout ?? errorJson?.config?.timeout ?? null,
+  };
+};
+
+const buildQueryString = (params = {}) => {
+  const query = Object.entries(params)
+    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .join('&');
+
+  return query ? `?${query}` : '';
+};
+
+const sendPaymentRequest = ({ method, path, body = {}, params = {}, headers = {}, baseUrl = TRANSBANK_BASE_URL }) => new Promise((resolve, reject) => {
+  const request = new XMLHttpRequest();
+  const normalizedMethod = method.toUpperCase();
+  const requestBaseUrl = baseUrl || TRANSBANK_BASE_URL;
+  const url = `${requestBaseUrl}${path}${buildQueryString(params)}`;
+
+  request.open(normalizedMethod, url, true);
+  request.timeout = TRANSBANK_REQUEST_TIMEOUT;
+  request.setRequestHeader('Content-Type', 'application/json');
+  Object.entries(headers).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      request.setRequestHeader(key, value);
+    }
+  });
+
+  request.onreadystatechange = () => {
+    if (request.readyState !== 4) {
+      return;
+    }
+
+    const rawResponse = request.responseText ?? '';
+    let parsedResponse = rawResponse;
+
+    try {
+      parsedResponse = rawResponse ? JSON.parse(rawResponse) : null;
+    } catch (parseError) {
+      parsedResponse = rawResponse;
+    }
+
+    if (request.status >= 200 && request.status < 300) {
+      resolve({
+        status: request.status,
+        data: parsedResponse,
+      });
+      return;
+    }
+
+    reject({
+      message: `Request failed with status code ${request.status || 0}`,
+      response: {
+        status: request.status || null,
+        data: parsedResponse,
+      },
+      config: {
+        url,
+        method: normalizedMethod.toLowerCase(),
+        baseURL: requestBaseUrl,
+        data: body,
+        params,
+        headers,
+        timeout: TRANSBANK_REQUEST_TIMEOUT,
+      },
+    });
+  };
+
+  request.ontimeout = () => {
+    reject({
+      message: `timeout of ${TRANSBANK_REQUEST_TIMEOUT}ms exceeded`,
+      code: 'ECONNABORTED',
+      response: null,
+      config: {
+        url,
+        method: normalizedMethod.toLowerCase(),
+        baseURL: requestBaseUrl,
+        data: body,
+        params,
+        headers,
+        timeout: TRANSBANK_REQUEST_TIMEOUT,
+      },
+    });
+  };
+
+  request.onerror = () => {
+    reject({
+      message: 'Network request failed',
+      response: null,
+      config: {
+        url,
+        method: normalizedMethod.toLowerCase(),
+        baseURL: requestBaseUrl,
+        data: body,
+        params,
+        headers,
+        timeout: TRANSBANK_REQUEST_TIMEOUT,
+      },
+    });
+  };
+
+  const hasBody = body && Object.keys(body).length > 0;
+  request.send(hasBody ? JSON.stringify(body) : null);
+});
+
+const buildStageError = (error, stage, fallbackMessage) => {
+  if (error?.stage && error?.details?.axios) {
+    return error;
+  }
+
+  const parsed = parseApiError(error, fallbackMessage);
+
+  parsed.stage = stage;
+  parsed.message = `[${stage}] ${parsed.message}`;
+  parsed.details = {
+    ...(parsed.details ?? {}),
+    stage,
+    axios: buildAxiosErrorLog(error),
+  };
+
+  return parsed;
+};
+
+const getErrorStatus = (error) => (
+  error?.response?.status
+  ?? error?.httpStatus
+  ?? error?.details?.axios?.status
+  ?? null
+);
+
+const getErrorData = (error) => (
+  error?.response?.data
+  ?? error?.details?.axios?.data
+  ?? error?.details
+  ?? null
+);
+
+const getBackendErrorCode = (error) => {
+  const data = getErrorData(error);
+
+  return data?.error ?? data?.code ?? error?.backendError ?? null;
+};
+
+const isExistingTransbankUserError = (error) => {
+  const data = getErrorData(error);
+  const values = [
+    getBackendErrorCode(error),
+    data?.message,
+    data?.error_message,
+    error?.message,
+  ].filter(Boolean).map((value) => String(value).toLowerCase());
+
+  return values.some((value) => value.includes('usuario ya existe'));
+};
+
+const validateInitPaymentConfig = () => {
+  const missingFields = [
+    ['EXPO_PUBLIC_TRANSBANK_COMMERCE_NAME', appConfig.transbankCommerceName],
+    ['EXPO_PUBLIC_TRANSBANK_COMMERCE_RUT', appConfig.transbankCommerceRut],
+  ].filter(([, value]) => !value).map(([name]) => name);
+
+  if (missingFields.length > 0) {
+    throw new Error(`Falta configuración de Transbank en variables de entorno: ${missingFields.join(', ')}`);
+  }
+};
 
 const extractTransbankUserToken = (data = {}) => (
   data?.token
@@ -62,57 +269,89 @@ const persistTransbankUserToken = async (email, token) => {
 
 const consultTransbankUserToken = async (email) => {
   try {
-    const response = await axios({
-      method: 'GET',
+    console.error('[consultTransbankUserToken] request:', {
       url: `${TRANSBANK_BASE_URL}/consultar_token`,
-      headers: {
-        'Content-Type': 'application/json',
+      method: 'GET',
+      email,
+    });
+
+    const response = await sendPaymentRequest({
+      method: 'GET',
+      path: '/consultar_token',
+      body: {
+        email,
       },
-      data: {
+      params: {
         email,
       },
     });
 
-    console.error('[consultTransbankUserToken] response:', JSON.stringify(response?.data ?? null, null, 2));
+    console.error('[consultTransbankUserToken] response:', {
+      status: response?.status ?? null,
+      hasToken: Boolean(extractTransbankUserToken(response?.data)),
+      data: response?.data ?? null,
+    });
+
     return extractTransbankUserToken(response?.data);
   } catch (error) {
-    console.error('[consultTransbankUserToken] error:', {
-      message: error?.message,
-      code: error?.code,
-      status: error?.response?.status ?? null,
-      data: error?.response?.data ?? null,
-      requestUrl: error?.config?.url ?? null,
-      method: error?.config?.method ?? null,
-    });
-    throw error;
+    console.error('[consultTransbankUserToken] error:', buildAxiosErrorLog(error, {
+      email,
+      stage: 'consultar_token',
+    }));
+    throw buildStageError(error, 'consultar_token', 'No se pudo consultar el token de Transbank.');
   }
 };
 
 const createTransbankUser = async ({ name, email }) => {
   try {
-    const response = await axios.post(`${TRANSBANK_BASE_URL}/crear_usuario`, {
-      nombre: name,
+    console.error('[createTransbankUser] request:', {
+      url: `${TRANSBANK_BASE_URL}/crear_usuario`,
+      method: 'POST',
       email,
+      name,
     });
 
-    console.error('[createTransbankUser] response:', JSON.stringify(response?.data ?? null, null, 2));
+    const response = await sendPaymentRequest({
+      method: 'POST',
+      path: '/crear_usuario',
+      body: {
+        nombre: name,
+        email,
+      },
+    });
+
+    console.error('[createTransbankUser] response:', {
+      status: response?.status ?? null,
+      hasToken: Boolean(extractTransbankUserToken(response?.data)),
+      data: response?.data ?? null,
+    });
+
     return extractTransbankUserToken(response?.data);
   } catch (error) {
-    console.error('[createTransbankUser] error:', {
-      message: error?.message,
-      code: error?.code,
-      status: error?.response?.status ?? null,
-      data: error?.response?.data ?? null,
-      requestUrl: error?.config?.url ?? null,
-      method: error?.config?.method ?? null,
-    });
-    throw error;
+    console.error('[createTransbankUser] error:', buildAxiosErrorLog(error, {
+      email,
+      name,
+      stage: 'crear_usuario',
+    }));
+    throw buildStageError(error, 'crear_usuario', 'No se pudo crear el usuario de Transbank.');
   }
 };
 
 const getOrCreateTransbankUserToken = async (customerOverride = null) => {
+  if (appConfig.transbankUserToken) {
+    console.error('[getOrCreateTransbankUserToken] using configured x-api-token');
+    return appConfig.transbankUserToken;
+  }
+
   const customer = customerOverride ?? await buildCheckoutCustomer();
   const email = customer?.email?.trim();
+  const customerName = buildCustomerName(customer);
+
+  console.error('[getOrCreateTransbankUserToken] start:', {
+    email,
+    customerName,
+    hasCustomerOverride: Boolean(customerOverride),
+  });
 
   if (!email) {
     throw new Error('No se pudo obtener el correo del usuario para Transbank.');
@@ -134,11 +373,11 @@ const getOrCreateTransbankUserToken = async (customerOverride = null) => {
       return existingToken;
     }
   } catch (error) {
-    const status = error?.response?.status;
-    const backendError = error?.response?.data?.error ?? error?.response?.data?.code ?? null;
+    const status = getErrorStatus(error);
+    const backendError = getBackendErrorCode(error);
 
     if (status && ![404, 422].includes(status) && backendError !== 'not_found') {
-      throw parseApiError(error, 'No se pudo consultar el token de Transbank.');
+      throw error;
     }
   }
 
@@ -146,15 +385,15 @@ const getOrCreateTransbankUserToken = async (customerOverride = null) => {
 
   try {
     createdToken = await createTransbankUser({
-      name: buildCustomerName(customer),
+      name: customerName,
       email,
     });
   } catch (error) {
-    const backendError = error?.response?.data?.error ?? error?.response?.data?.code ?? null;
-
-    if (backendError !== 'Usuario ya existe') {
-      throw parseApiError(error, 'No se pudo crear el usuario de Transbank.');
+    if (!isExistingTransbankUserError(error)) {
+      throw error;
     }
+
+    console.error('[getOrCreateTransbankUserToken] user already exists, consulting token for:', email);
   }
 
   if (createdToken) {
@@ -175,101 +414,170 @@ const getOrCreateTransbankUserToken = async (customerOverride = null) => {
 };
 
 const getTransbankHeaders = async (customer = null) => {
-  const token = await getOrCreateTransbankUserToken(customer);
+  try {
+    const token = await getOrCreateTransbankUserToken(customer);
 
-  if (!token) {
-    return {};
+    if (!token) {
+      throw new Error('No se pudo obtener el x-api-token de Transbank.');
+    }
+
+    const headers = {
+      'x-api-token': token,
+    };
+
+    console.error('[getTransbankHeaders] headers:', {
+      'x-api-token': token ? `${token.slice(0, 8)}...` : null,
+    });
+
+    return headers;
+  } catch (error) {
+    console.error('[getTransbankHeaders] token resolution error:', buildAxiosErrorLog(error, {
+      stage: 'resolve_x_api_token',
+    }));
+
+    throw error;
   }
-
-  const headers = {
-    'x-api-token': token,
-  };
-
-  console.error('[getTransbankHeaders] headers:', {
-    'x-api-token': token ? `${token.slice(0, 8)}...` : null,
-  });
-
-  return headers;
 };
 
 const initiateTransbankPayment = async ({
   externalReference,
   amount,
-  urlService,
   chatUrl,
   customer,
   }) => {
   try {
+    validateInitPaymentConfig();
+    const confirmationCallbackUrl = await getPaymentConfirmationCallbackUrl();
+
     const payload = {
       id: externalReference,
-      modo: TRANSBANK_MODE,
-      cliente: {
-        commerceCode: TRANSBANK_COMMERCE_CODE,
-        APIKey: TRANSBANK_API_KEY_SECRET,
-      },
+      external_reference: externalReference,
+      externalReference,
+      modo: appConfig.transbankMode,
       amount,
-      comercio: TRANSBANK_COMMERCE_NAME,
-      rut_comercio: TRANSBANK_COMMERCE_RUT,
-      UrlService: urlService,
+      comercio: appConfig.transbankCommerceName,
+      rut_comercio: appConfig.transbankCommerceRut,
+      UrlService: confirmationCallbackUrl,
+      urlService: confirmationCallbackUrl,
+      url_service: confirmationCallbackUrl,
       chatUrl,
+      Chaturl: chatUrl,
+      ChatUrl: chatUrl,
     };
-
-    console.error('[initiateTransbankPayment] payload:', JSON.stringify(payload, null, 2));
 
     const headers = await getTransbankHeaders(customer);
     console.error('[initiateTransbankPayment] request meta:', {
       url: `${TRANSBANK_BASE_URL}/iniciar_pago`,
-      headers,
+      externalReference,
+      amount,
+      mode: appConfig.transbankMode,
+      comercio: appConfig.transbankCommerceName,
+      rutComercio: appConfig.transbankCommerceRut,
+      urlService: confirmationCallbackUrl,
+      chatUrl,
+      headers: {
+        'x-api-token': maskSecret(headers?.['x-api-token']),
+      },
+    });
+    console.error('[initiateTransbankPayment] payload shape:', {
+      id: payload.id,
+      modo: payload.modo,
+      amount: payload.amount,
+      comercio: payload.comercio,
+      rut_comercio: payload.rut_comercio,
+      UrlService: payload.UrlService,
+      urlService: payload.urlService,
+      url_service: payload.url_service,
+      chatUrl: payload.chatUrl,
+      Chaturl: payload.Chaturl,
+      ChatUrl: payload.ChatUrl,
     });
 
-    const response = await axios.post(`${TRANSBANK_BASE_URL}/iniciar_pago`, payload, {
+    const response = await sendPaymentRequest({
+      method: 'POST',
+      path: '/iniciar_pago',
+      body: payload,
       headers,
     });
-    console.error('[initiateTransbankPayment] response:', JSON.stringify(response?.data ?? null, null, 2));
+    console.error('[initiateTransbankPayment] response meta:', {
+      status: response?.status ?? null,
+      hasToken: Boolean(response?.data?.token_ws ?? response?.data?.token),
+      hasPaymentUrl: Boolean(
+        response?.data?.payment_url
+        ?? response?.data?.url
+        ?? response?.data?.redirect_url
+        ?? response?.data?.redirectUrl
+      ),
+      data: response?.data ?? null,
+    });
 
     return normalizeTransbankInitResponse(response.data);
   } catch (error) {
-    console.error('[initiateTransbankPayment] error:', {
-      message: error?.message,
-      code: error?.code,
-      status: error?.response?.status ?? null,
-      data: error?.response?.data ?? null,
-      requestUrl: error?.config?.url ?? null,
-      method: error?.config?.method ?? null,
-      headers: error?.config?.headers ?? null,
-      timeout: error?.config?.timeout ?? null,
-    });
-    throw parseApiError(error, 'No se pudo iniciar el pago con Transbank.');
+    console.error('[initiateTransbankPayment] error:', buildAxiosErrorLog(error, {
+      stage: 'iniciar_pago',
+      externalReference,
+      amount,
+    }));
+    throw buildStageError(error, 'iniciar_pago', 'No se pudo iniciar el pago con Transbank.');
   }
 };
 
-const confirmTransbankPayment = async ({ tokenWs }) => {
+const confirmTransbankPayment = async ({ tokenWs, externalReference }) => {
   try {
     const headers = await getTransbankHeaders();
     console.error('[confirmTransbankPayment] request meta:', {
-      url: `${TRANSBANK_BASE_URL}/confirmar_pago`,
-      tokenWs,
-      headers,
-    });
-    const response = await axios.get(`${TRANSBANK_BASE_URL}/confirmar_pago`, {
-      params: {
-        token_ws: tokenWs,
+      url: `${TRANSBANK_CONFIRM_BASE_URL}${TRANSBANK_STATUS_PATH}`,
+      tokenWs: maskSecret(tokenWs),
+      externalReference,
+      headers: {
+        'x-api-token': maskSecret(headers?.['x-api-token']),
       },
+    });
+
+    const params = {};
+
+    if (tokenWs) {
+      params.token_ws = tokenWs;
+    }
+
+    if (externalReference) {
+      params.external_reference = externalReference;
+    }
+
+    const response = await sendPaymentRequest({
+      method: 'GET',
+      baseUrl: TRANSBANK_CONFIRM_BASE_URL,
+      path: TRANSBANK_STATUS_PATH,
+      params,
       headers,
     });
-    console.error('[confirmTransbankPayment] response:', JSON.stringify(response?.data ?? null, null, 2));
+    console.error('[confirmTransbankPayment] response meta:', {
+      status: response?.status ?? null,
+      paymentStatus: response?.data?.status ?? response?.data?.response_code ?? null,
+      externalReference: response?.data?.external_reference ?? response?.data?.data?.external_reference ?? null,
+      buyOrder: response?.data?.buy_order ?? response?.data?.data?.buy_order ?? null,
+      data: response?.data ?? null,
+    });
 
     return normalizeTransbankConfirmResponse(response.data);
   } catch (error) {
-    console.error('[confirmTransbankPayment] error:', {
-      message: error?.message,
-      code: error?.code,
-      status: error?.response?.status ?? null,
-      data: error?.response?.data ?? null,
-      requestUrl: error?.config?.url ?? null,
-      method: error?.config?.method ?? null,
-    });
-    throw parseApiError(error, 'No se pudo confirmar el pago con Transbank.');
+    const status = getErrorStatus(error);
+
+    if (status === 404) {
+      return normalizeTransbankConfirmResponse({
+        pending: true,
+        status: 'PENDING',
+        external_reference: externalReference,
+        data: getErrorData(error),
+      });
+    }
+
+    console.error('[confirmTransbankPayment] error:', buildAxiosErrorLog(error, {
+      stage: 'confirmar_pago',
+      tokenWs: maskSecret(tokenWs),
+      externalReference,
+    }));
+    throw buildStageError(error, 'confirmar_pago', 'No se pudo confirmar el pago con Transbank.');
   }
 };
 

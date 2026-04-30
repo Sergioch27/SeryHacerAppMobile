@@ -9,7 +9,6 @@ import {
   InitMobileReservationPayment,
   LockMobileReservationCart,
   RemoveMobileReservationCart,
-  getPaymentConfirmationCallbackUrl,
 } from '../../../service/wp_service';
 import { confirmTransbankPayment, initiateTransbankPayment } from '../../../service/transbank_service';
 import {
@@ -23,6 +22,7 @@ import {
   getReservationAmount,
   getReservationErrorMessage,
   getVariationForBookingType,
+  isReservationExpireConflict,
   isLocalStateResetError,
   parseServerDateTime,
   resolveReservationExpirationDate,
@@ -30,6 +30,8 @@ import {
 
 const getCartBaseKey = (productId) => `${productId ?? 'box'}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const APP_VERSION = '1.0.0';
+const PAYMENT_STATUS_POLL_ATTEMPTS = 12;
+const PAYMENT_STATUS_POLL_INTERVAL_MS = 2500;
 
 const buildReservations = (reservationList = [], bookingType, baseKey) => {
   const labels = buildReservationLabels(reservationList, bookingType);
@@ -105,6 +107,29 @@ const buildCartItem = ({
 };
 
 const findItemIndex = (state, cartKey) => state.items.findIndex((item) => item.cartKey === cartKey);
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const pollTransbankPaymentStatus = async ({ tokenWs, externalReference }) => {
+  let lastResponse = null;
+
+  for (let attempt = 0; attempt < PAYMENT_STATUS_POLL_ATTEMPTS; attempt += 1) {
+    lastResponse = await confirmTransbankPayment({ tokenWs, externalReference });
+
+    if (lastResponse.successful) {
+      return lastResponse;
+    }
+
+    if (!lastResponse.pending) {
+      return lastResponse;
+    }
+
+    if (attempt < PAYMENT_STATUS_POLL_ATTEMPTS - 1) {
+      await wait(PAYMENT_STATUS_POLL_INTERVAL_MS);
+    }
+  }
+
+  return lastResponse;
+};
 
 const buildPaymentPayload = (item) => {
   const amount = getReservationAmount(item.productPrice, item.quantity);
@@ -238,8 +263,39 @@ export const expireReservationItems = createAsyncThunk(
     }
 
     try {
-      await Promise.all(expiredItems.map((item) => ExpireMobileReservation({ bookingId: item.bookingId })));
-      return expiredItems.map((item) => item.cartKey);
+      const results = await Promise.allSettled(
+        expiredItems.map((item) => ExpireMobileReservation({ bookingId: item.bookingId }))
+      );
+
+      const removableKeys = [];
+
+      results.forEach((result, index) => {
+        const item = expiredItems[index];
+
+        if (result.status === 'fulfilled') {
+          removableKeys.push(item.cartKey);
+          return;
+        }
+
+        const error = result.reason;
+
+        if (isReservationExpireConflict(error) || isLocalStateResetError(error)) {
+          console.error('[expireReservationItems] treating backend terminal state as expired:', {
+            bookingId: item.bookingId,
+            cartKey: item.cartKey,
+            status: error?.httpStatus ?? error?.response?.status ?? null,
+            code: error?.code ?? null,
+            message: error?.message ?? null,
+          });
+          removableKeys.push(item.cartKey);
+        }
+      });
+
+      if (removableKeys.length > 0) {
+        return removableKeys;
+      }
+
+      throw results.find((result) => result.status === 'rejected')?.reason;
     } catch (error) {
       return rejectWithValue({
         message: getReservationErrorMessage(error),
@@ -282,17 +338,14 @@ export const startReservationCheckout = createAsyncThunk(
         },
       });
       console.error('[startReservationCheckout] wp init response:', JSON.stringify(initResponse, null, 2));
-      const callbackUrl = await getPaymentConfirmationCallbackUrl();
       const chatUrl = BuildChatUrl(initResponse.externalReference ?? externalReference);
       console.error('[startReservationCheckout] transbank request meta:', JSON.stringify({
-        callbackUrl,
         chatUrl,
         externalReference: initResponse.externalReference ?? externalReference,
       }, null, 2));
       const transbankResponse = await initiateTransbankPayment({
         externalReference: initResponse.externalReference ?? externalReference,
         amount: getReservationAmount(item.productPrice, item.quantity),
-        urlService: callbackUrl,
         chatUrl,
         customer: checkoutData,
       });
@@ -314,6 +367,7 @@ export const startReservationCheckout = createAsyncThunk(
       console.error('[startReservationCheckout] error:', JSON.stringify({
         message: error?.message ?? null,
         code: error?.code ?? null,
+        stage: error?.stage ?? error?.details?.stage ?? null,
         status: error?.httpStatus ?? error?.response?.status ?? null,
         details: error?.details ?? error?.response?.data ?? null,
       }, null, 2));
@@ -321,6 +375,8 @@ export const startReservationCheckout = createAsyncThunk(
         cartKey,
         message: getReservationErrorMessage(error),
         code: error?.code ?? null,
+        stage: error?.stage ?? error?.details?.stage ?? null,
+        details: error?.details ?? error?.response?.data ?? null,
       });
     }
   }
@@ -330,16 +386,27 @@ export const confirmReservationPaymentFromReturn = createAsyncThunk(
   'cart/confirmReservationPaymentFromReturn',
   async ({ tokenWs, externalReference }, { getState, rejectWithValue }) => {
     try {
-      const transbankResponse = await confirmTransbankPayment({ tokenWs });
       const item = getState().cart.items.find((entry) => entry.externalReference === externalReference)
         ?? getState().cart.items.find((entry) => entry.reservationState === 'pending');
+      const resolvedTokenWs = tokenWs ?? item?.tokenWs ?? null;
 
       if (!item) {
         throw new Error('No se encontró la reserva pendiente asociada al pago.');
       }
 
+      if (!resolvedTokenWs && !externalReference) {
+        throw new Error('No se recibio informacion suficiente para confirmar el pago.');
+      }
+
+      const transbankResponse = await pollTransbankPaymentStatus({
+        tokenWs: resolvedTokenWs,
+        externalReference: externalReference ?? item.externalReference,
+      });
+
       if (!transbankResponse.successful) {
-        throw new Error('El pago fue rechazado por Transbank.');
+        throw new Error(transbankResponse.pending
+          ? 'El pago aun no tiene resultado confirmado. Intenta verificar nuevamente en unos segundos.'
+          : 'El pago fue rechazado por Transbank.');
       }
 
       const confirmResponse = await ConfirmMobileReservationPayment({

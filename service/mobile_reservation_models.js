@@ -1,11 +1,6 @@
 const RESERVATION_STORAGE_KEY = '@seryhacer/reservation-cart-v1';
 const APP_SCHEME = 'seryhacerapp';
 const PAYMENT_RESULT_PATH = 'payment-result';
-const TRANSBANK_COMMERCE_CODE = '597055555532';
-const TRANSBANK_API_KEY_SECRET = '579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C';
-const TRANSBANK_MODE = 'INTEGRACION';
-const TRANSBANK_COMMERCE_NAME = 'Servicios de psicología Ser y Hacer Ltda';
-const TRANSBANK_COMMERCE_RUT = '77225631-0';
 const DEFAULT_EXPIRATION_MINUTES = 20;
 const BOOKING_ACTIVITY_ID = 3;
 
@@ -312,30 +307,109 @@ const normalizeCouponsResponse = (data = {}) => {
   };
 };
 
+const buildTransbankPaymentUrl = (baseUrl, token) => {
+  if (!baseUrl) {
+    return null;
+  }
+
+  if (!token) {
+    return baseUrl;
+  }
+
+  const separator = baseUrl.includes('?') ? '&' : '?';
+  return `${baseUrl}${separator}token_ws=${encodeURIComponent(token)}`;
+};
+
 const normalizeTransbankInitResponse = (data = {}) => ({
   tokenWs: data?.token_ws ?? data?.token ?? null,
-  paymentUrl: data?.payment_url ?? data?.url ?? data?.redirect_url ?? data?.redirectUrl ?? null,
+  paymentUrl: buildTransbankPaymentUrl(
+    data?.payment_url ?? data?.url ?? data?.redirect_url ?? data?.redirectUrl ?? null,
+    data?.token_ws ?? data?.token ?? null
+  ),
   status: data?.status ?? null,
   raw: data,
 });
 
+const getFirstValue = (sources = [], keys = []) => {
+  for (const source of sources) {
+    if (!source || typeof source !== 'object') {
+      continue;
+    }
+
+    for (const key of keys) {
+      if (source[key] !== undefined && source[key] !== null && source[key] !== '') {
+        return source[key];
+      }
+    }
+  }
+
+  return null;
+};
+
+const normalizeBooleanFlag = (value) => {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    return value === 1;
+  }
+
+  if (typeof value === 'string') {
+    return ['true', '1', 'ok', 'success', 'successful', 'approved', 'aprobado'].includes(value.toLowerCase());
+  }
+
+  return null;
+};
+
 const normalizeTransbankConfirmResponse = (data = {}) => {
-  const status = data?.status ?? data?.response_code ?? data?.data?.status ?? null;
-  const successful = Boolean(
-    data?.successful
-    ?? data?.success
-    ?? data?.status === 'AUTHORIZED'
-    ?? data?.status === 'paid'
-    ?? data?.response_code === 0
-    ?? data?.vci === 'TSY'
+  const sources = [
+    data,
+    data?.data,
+    data?.transaction,
+    data?.payment,
+    data?.result,
+    data?.response,
+    data?.transbank,
+  ];
+  const status = getFirstValue(sources, ['status', 'estado', 'payment_status', 'response_status']);
+  const responseCode = getFirstValue(sources, ['response_code', 'responseCode', 'codigo_respuesta']);
+  const storedExternalReference = getFirstValue(sources, ['external_reference', 'externalReference']);
+  const pendingFlag = normalizeBooleanFlag(getFirstValue(sources, ['pending', 'is_pending']));
+  const vci = getFirstValue(sources, ['vci']);
+  const successFlag = normalizeBooleanFlag(getFirstValue(sources, ['successful', 'success', 'approved', 'aprobado']));
+  const normalizedStatus = status ? String(status).toUpperCase() : null;
+  const normalizedResponseCode = responseCode !== null ? Number(responseCode) : null;
+  const successful = successFlag ?? (
+    normalizedStatus === 'AUTHORIZED'
+    || normalizedStatus === 'APPROVED'
+    || normalizedStatus === 'APROBADO'
+    || normalizedStatus === 'PAID'
+    || normalizedStatus === 'COMPLETED'
+    || normalizedStatus === 'SUCCESS'
+    || normalizedResponseCode === 0
+    || vci === 'TSY'
+  );
+  const pending = pendingFlag ?? (
+    !successful && (
+      normalizedStatus === 'PENDING'
+      || normalizedStatus === 'CREATED'
+      || normalizedStatus === 'IN_PROGRESS'
+      || normalizedStatus === 'PROCESSING'
+      || normalizedStatus === 'NULL'
+      || status === null
+      || responseCode === null
+    )
   );
 
   return {
+    externalReference: storedExternalReference,
+    pending,
     successful,
-    transactionId: data?.transaction_id ?? data?.buy_order ?? data?.authorization_code ?? null,
-    amount: toNumber(data?.amount ?? data?.data?.amount, 0),
-    status,
-    paidAt: data?.transaction_date ?? data?.paid_at ?? new Date().toISOString(),
+    transactionId: getFirstValue(sources, ['transaction_id', 'transactionId', 'buy_order', 'buyOrder', 'authorization_code', 'authorizationCode']),
+    amount: toNumber(getFirstValue(sources, ['amount', 'monto']), 0),
+    status: status ?? responseCode ?? null,
+    paidAt: getFirstValue(sources, ['transaction_date', 'transactionDate', 'paid_at', 'paidAt']) ?? new Date().toISOString(),
     raw: data,
   };
 };
@@ -351,6 +425,8 @@ const getReservationErrorMessage = (error) => {
 const isLocalStateResetError = (error) => ['booking_not_found', 'order_not_found'].includes(error?.code);
 
 const isNoAvailabilityError = (error) => error?.code === 'no_availability';
+
+const isReservationExpireConflict = (error) => error?.httpStatus === 409 || error?.response?.status === 409;
 
 const extractBookingIdFromOrder = (order, localMap = {}) => {
   if (!order) {
@@ -401,12 +477,8 @@ export {
   DEFAULT_EXPIRATION_MINUTES,
   PAYMENT_RESULT_PATH,
   RESERVATION_STORAGE_KEY,
-  TRANSBANK_API_KEY_SECRET,
-  TRANSBANK_COMMERCE_CODE,
-  TRANSBANK_COMMERCE_NAME,
-  TRANSBANK_COMMERCE_RUT,
-  TRANSBANK_MODE,
   buildChatUrl,
+  buildTransbankPaymentUrl,
   buildExistingExternalReference,
   buildReservationLabels,
   extractBookingIdFromOrder,
@@ -418,6 +490,7 @@ export {
   getProductBookingConfig,
   getReservationAmount,
   getReservationErrorMessage,
+  isReservationExpireConflict,
   isLocalStateResetError,
   isNoAvailabilityError,
   normalizeCouponsResponse,

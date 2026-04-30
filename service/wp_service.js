@@ -421,6 +421,14 @@ const CreateOrder = async (payload) => {
 
 const getAppApiBaseUrl = async () => `${await ApiType()}app/v1`;
 
+const getReservationPaymentConfirmUrl = async () => {
+    if (process.env.EXPO_PUBLIC_TRANSBANK_MODE === 'INTEGRACION') {
+        return `${API_BASE_URL_DEV}app/v1/mobile-reservation-payment-confirm`;
+    }
+
+    return `${await getAppApiBaseUrl()}/mobile-reservation-payment-confirm`;
+};
+
 const getAuthHeaders = async () => {
     const { token } = await getAuthContext();
 
@@ -445,6 +453,25 @@ const appPost = async (path, payload) => {
     catch (error) {
         console.log('[appPost] error', {
             path,
+            status: error?.response?.status ?? null,
+            data: error?.response?.data ?? null,
+        });
+        throw parseApiError(error, 'No se pudo completar la solicitud con el backend.');
+    }
+};
+
+const appPostUrl = async (url, payload, logPath) => {
+    try {
+        const headers = await getAuthHeaders();
+        const response = await withRetries(() => axios.post(url, payload, {
+            headers,
+        }));
+        return response.data;
+    }
+    catch (error) {
+        console.log('[appPostUrl] error', {
+            path: logPath,
+            url,
             status: error?.response?.status ?? null,
             data: error?.response?.data ?? null,
         });
@@ -535,7 +562,11 @@ const ConfirmMobileReservationPayment = async ({
         payload.external_reference = externalReference;
     }
 
-    const response = await appPost('mobile-reservation-payment-confirm', payload);
+    const response = await appPostUrl(
+        await getReservationPaymentConfirmUrl(),
+        payload,
+        'mobile-reservation-payment-confirm'
+    );
     return normalizeReservationPaymentConfirmResponse(response);
 };
 
