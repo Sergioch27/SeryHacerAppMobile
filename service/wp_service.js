@@ -501,6 +501,55 @@ const buildCheckoutCustomer = async (profileOverride = null) => {
     };
 };
 
+const SaveCheckoutCustomerProfile = async (customer = {}) => {
+    const { token, userId } = await getAuthContext();
+    const customerId = customer?.user_id ?? userId;
+
+    if (!customerId) {
+        return null;
+    }
+
+    const payload = {
+        first_name: customer.first_name ?? '',
+        last_name: customer.last_name ?? '',
+        billing: {
+            first_name: customer.first_name ?? '',
+            last_name: customer.last_name ?? '',
+            email: customer.email ?? '',
+            phone: customer.phone ?? '',
+            address_1: customer.address_1 ?? '',
+            address_2: customer.address_2 ?? '',
+            city: customer.city ?? '',
+            state: customer.state ?? '',
+            postcode: customer.postcode ?? '',
+            country: customer.country ?? 'CL',
+        },
+        meta_data: [
+            {
+                key: 'user_dni',
+                value: customer.document_id ?? '',
+            },
+        ],
+    };
+
+    try {
+        const apiBaseUrl = await ApiType();
+        const response = await withRetries(() => axios.put(apiBaseUrl + 'wc/v3/customers/' + `${customerId}`, payload, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }));
+        return response.data;
+    }
+    catch (error) {
+        console.log('[SaveCheckoutCustomerProfile] no se pudo actualizar cliente WooCommerce:', {
+            status: error?.response?.status ?? null,
+            data: error?.response?.data ?? null,
+        });
+        throw parseApiError(error, 'No se pudieron guardar los datos del formulario.');
+    }
+};
+
 const LockMobileReservationCart = async ({ booking, customer }) => {
     const response = await appPost('mobile-reservation-cart-lock', {
         booking: {
@@ -519,6 +568,7 @@ const InitMobileReservationPayment = async ({
     product,
     customer,
     payment,
+    coupon,
     meta,
 }) => {
     const resolvedCustomer = customer ?? await buildCheckoutCustomer();
@@ -528,6 +578,7 @@ const InitMobileReservationPayment = async ({
         product,
         customer: resolvedCustomer,
         payment,
+        coupon,
         meta,
     };
 
@@ -589,6 +640,10 @@ const CancelMobileReservationOrder = async ({ orderId, bookingId, reason }) => {
         order_id: orderId,
         booking_id: bookingId,
         reason,
+        order_status: 'refunded',
+        refund_status: 'refunded',
+        coupon_code_length: 8,
+        short_coupon: true,
     });
 
     return {
@@ -637,6 +692,7 @@ export {
     RecoverPassword,
     RegisterRequest,
     RemoveMobileReservationCart,
+    SaveCheckoutCustomerProfile,
     appPost,
     buildChatUrl as BuildChatUrl,
     buildCheckoutCustomer,

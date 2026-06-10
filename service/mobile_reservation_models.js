@@ -289,15 +289,25 @@ const normalizeReservationPaymentConfirmResponse = (data = {}) => {
   };
 };
 
-const normalizeCoupon = (coupon = {}) => ({
-  code: coupon?.code ?? '',
-  amount: coupon?.amount ?? coupon?.discount_amount ?? '',
-  expiresAt: coupon?.expires_at ?? coupon?.date_expires ?? null,
-  available: coupon?.available ?? coupon?.is_available ?? false,
-  sourceOrder: toNumber(coupon?.source_order ?? coupon?.order_id),
-  bookingId: toNumber(coupon?.booking_id),
-  raw: coupon,
-});
+const normalizeCoupon = (coupon = {}) => {
+  const usageCount = toNumber(coupon?.usage_count ?? coupon?.used_count, 0);
+  const usageLimit = toNumber(coupon?.usage_limit ?? coupon?.limit_usage_to_x_items, null);
+  const explicitlyAvailable = coupon?.available ?? coupon?.is_available;
+  const used = Boolean(coupon?.used ?? coupon?.is_used)
+    || (usageLimit !== null && usageLimit > 0 && usageCount >= usageLimit);
+
+  return {
+    code: coupon?.code ?? '',
+    amount: coupon?.amount ?? coupon?.discount_amount ?? '',
+    expiresAt: coupon?.expires_at ?? coupon?.date_expires ?? null,
+    available: explicitlyAvailable !== undefined ? Boolean(explicitlyAvailable) && !used : !used,
+    usageCount,
+    usageLimit,
+    sourceOrder: toNumber(coupon?.source_order ?? coupon?.order_id),
+    bookingId: toNumber(coupon?.booking_id),
+    raw: coupon,
+  };
+};
 
 const normalizeCouponsResponse = (data = {}) => {
   const coupons = toArray(data?.coupons ?? data?.data ?? data).map(normalizeCoupon);

@@ -1,13 +1,28 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 import { AntDesign } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LoginInput from './smart_components/LoginInput';
 import Loading from './smart_components/Loading';
-import { GetCurrentUserProfile, buildCheckoutCustomer } from '../../service/wp_service';
+import { GetCurrentUserProfile, SaveCheckoutCustomerProfile, buildCheckoutCustomer } from '../../service/wp_service';
 import { clearCartError, startReservationCheckout } from '../features/cart/cartReservationSlice';
+import { fetchUserCoupons } from '../features/coupons/couponsSlice';
+
+const CHECKOUT_PROFILE_CACHE_KEY = '@seryhacer/checkout-profile-v1';
+
+const parseAmount = (value) => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  const normalizedValue = String(value ?? '').replace(/[^\d,-]/g, '').replace(',', '.');
+  const parsedValue = Number(normalizedValue);
+
+  return Number.isFinite(parsedValue) ? parsedValue : 0;
+};
 
 const PAYMENT_OPTIONS = [
   {
@@ -22,9 +37,12 @@ const CheckoutFormIntegrated = () => {
   const insets = useSafeAreaInsets();
   const cartItems = useSelector((state) => state.cart.items);
   const errorMessage = useSelector((state) => state.cart.errorMessage);
+  const coupons = useSelector((state) => state.coupons.items);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('transbank');
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [form, setForm] = useState({
     user_id: '',
     first_name: '',
@@ -54,20 +72,26 @@ const CheckoutFormIntegrated = () => {
           last_name: profile?.last_name ?? null,
         });
         const checkoutDraft = await buildCheckoutCustomer(profile);
+        const cachedRaw = await AsyncStorage.getItem(CHECKOUT_PROFILE_CACHE_KEY);
+        const cachedDraft = cachedRaw ? JSON.parse(cachedRaw) : {};
+        const mergedDraft = {
+          ...checkoutDraft,
+          ...Object.fromEntries(Object.entries(cachedDraft).filter(([, value]) => value !== undefined && value !== null && `${value}`.trim() !== '')),
+        };
 
         setForm({
-          user_id: checkoutDraft.user_id ? String(checkoutDraft.user_id) : '',
-          first_name: checkoutDraft.first_name ?? '',
-          last_name: checkoutDraft.last_name ?? '',
-          email: checkoutDraft.email ?? '',
-          phone: checkoutDraft.phone ?? '',
-          document_id: checkoutDraft.document_id ?? '',
-          address_1: checkoutDraft.address_1 ?? '',
-          address_2: checkoutDraft.address_2 ?? '',
-          city: checkoutDraft.city ?? '',
-          state: checkoutDraft.state ?? '',
-          postcode: checkoutDraft.postcode ?? '',
-          country: checkoutDraft.country ?? 'CL',
+          user_id: mergedDraft.user_id ? String(mergedDraft.user_id) : '',
+          first_name: mergedDraft.first_name ?? '',
+          last_name: mergedDraft.last_name ?? '',
+          email: mergedDraft.email ?? '',
+          phone: mergedDraft.phone ?? '',
+          document_id: mergedDraft.document_id ?? '',
+          address_1: mergedDraft.address_1 ?? '',
+          address_2: mergedDraft.address_2 ?? '',
+          city: mergedDraft.city ?? '',
+          state: mergedDraft.state ?? '',
+          postcode: mergedDraft.postcode ?? '',
+          country: mergedDraft.country ?? 'CL',
         });
       } catch (error) {
         console.log('[CheckoutFormIntegrated] load profile error:', {
@@ -82,6 +106,7 @@ const CheckoutFormIntegrated = () => {
     };
 
     loadProfile();
+    dispatch(fetchUserCoupons({ availableOnly: true }));
   }, []);
 
   const totalAmount = useMemo(() => {
@@ -92,11 +117,69 @@ const CheckoutFormIntegrated = () => {
     return Number(cartItem.productPrice ?? 0) * Math.max(cartItem.quantity ?? 1, 1);
   }, [cartItem]);
 
+  const discountAmount = useMemo(() => {
+    if (!appliedCoupon) {
+      return 0;
+    }
+
+    return Math.min(parseAmount(appliedCoupon.amount), totalAmount);
+  }, [appliedCoupon, totalAmount]);
+
+  const payableAmount = Math.max(totalAmount - discountAmount, 0);
+
+  const checkoutPayload = useMemo(() => ({
+    user_id: form.user_id ? Number(form.user_id) : undefined,
+    first_name: form.first_name.trim(),
+    last_name: form.last_name.trim(),
+    email: form.email.trim(),
+    phone: form.phone.trim(),
+    document_id: form.document_id.trim(),
+    address_1: form.address_1.trim(),
+    address_2: form.address_2.trim(),
+    city: form.city.trim(),
+    state: form.state.trim(),
+    postcode: form.postcode.trim(),
+    country: form.country.trim() || 'CL',
+  }), [form]);
+
   const handleChange = (key, value) => {
     setForm((current) => ({
       ...current,
       [key]: value,
     }));
+  };
+
+  const handleApplyCoupon = () => {
+    const normalizedCode = couponCode.trim().toUpperCase();
+
+    if (!normalizedCode) {
+      setAppliedCoupon(null);
+      return;
+    }
+
+    const coupon = coupons.find((item) => item.available && String(item.code).toUpperCase() === normalizedCode);
+
+    if (!coupon) {
+      Alert.alert('Cupón no disponible', 'Revisa el código o selecciona un cupón vigente desde tu lista.');
+      return;
+    }
+
+    setAppliedCoupon(coupon);
+    setCouponCode(coupon.code);
+  };
+
+  const handleSelectCoupon = (coupon) => {
+    if (!coupon.available) {
+      return;
+    }
+
+    setAppliedCoupon(coupon);
+    setCouponCode(coupon.code);
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
   };
 
   const handleSubmit = async () => {
@@ -109,47 +192,46 @@ const CheckoutFormIntegrated = () => {
       return;
     }
 
+    if (appliedCoupon && !appliedCoupon.available) {
+      Alert.alert('Cupón no disponible', 'Este cupón ya fue usado o venció. Quita el cupón para continuar.');
+      return;
+    }
+
     try {
       setSubmitting(true);
       dispatch(clearCartError());
+      await AsyncStorage.setItem(CHECKOUT_PROFILE_CACHE_KEY, JSON.stringify(checkoutPayload));
+
+      SaveCheckoutCustomerProfile(checkoutPayload).catch((error) => {
+        console.log('[CheckoutFormIntegrated] profile save skipped:', error?.message ?? error);
+      });
+
       console.error('[CheckoutFormIntegrated] payment init payload:', JSON.stringify({
         cartKey: cartItem.cartKey,
         paymentMethod,
-        checkoutData: {
-          user_id: form.user_id ? Number(form.user_id) : undefined,
-          first_name: form.first_name.trim(),
-          last_name: form.last_name.trim(),
-          email: form.email.trim(),
-          phone: form.phone.trim(),
-          document_id: form.document_id.trim(),
-          address_1: form.address_1.trim(),
-          address_2: form.address_2.trim(),
-          city: form.city.trim(),
-          state: form.state.trim(),
-          postcode: form.postcode.trim(),
-          country: form.country.trim() || 'CL',
-        },
+        checkoutData: checkoutPayload,
+        coupon: appliedCoupon,
+        discountAmount,
       }, null, 2));
       const checkoutResult = await dispatch(startReservationCheckout({
         cartKey: cartItem.cartKey,
-        checkoutData: {
-          user_id: form.user_id ? Number(form.user_id) : undefined,
-          first_name: form.first_name.trim(),
-          last_name: form.last_name.trim(),
-          email: form.email.trim(),
-          phone: form.phone.trim(),
-          document_id: form.document_id.trim(),
-          address_1: form.address_1.trim(),
-          address_2: form.address_2.trim(),
-          city: form.city.trim(),
-          state: form.state.trim(),
-          postcode: form.postcode.trim(),
-          country: form.country.trim() || 'CL',
-        },
+        checkoutData: checkoutPayload,
         paymentMethod,
+        coupon: appliedCoupon ? {
+          code: appliedCoupon.code,
+          amount: discountAmount,
+        } : null,
+        discountAmount,
       })).unwrap();
 
       console.error('[CheckoutFormIntegrated] payment init result:', JSON.stringify(checkoutResult, null, 2));
+      if (checkoutResult.completed) {
+        dispatch(fetchUserCoupons({ availableOnly: true }));
+        Alert.alert('Reserva confirmada', 'El cupón cubrió el total de la compra.');
+        navigation.navigate('OrderDetailsView', { orderId: checkoutResult.orderId });
+        return;
+      }
+
       navigation.navigate('PaymentWebView', {
         paymentUrl: checkoutResult.paymentUrl,
         external_reference: checkoutResult.externalReference,
@@ -198,7 +280,9 @@ const CheckoutFormIntegrated = () => {
         <View style={styles.summaryCard}>
           <Text style={styles.summaryTitle}>{cartItem.productName}</Text>
           <Text style={styles.summaryText}>{cartItem.reservationsLabel.join(' | ')}</Text>
-          <Text style={styles.summaryAmount}>Total: ${totalAmount}</Text>
+          <Text style={styles.summaryAmount}>Subtotal: ${totalAmount}</Text>
+          {appliedCoupon ? <Text style={styles.discountText}>Cupón {appliedCoupon.code}: -${discountAmount}</Text> : null}
+          <Text style={styles.summaryTotal}>Total a pagar: ${payableAmount}</Text>
         </View>
 
         <View style={styles.section}>
@@ -217,8 +301,47 @@ const CheckoutFormIntegrated = () => {
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Cupón</Text>
+          <View style={styles.couponRow}>
+            <LoginInput
+              style={[styles.input, styles.couponInput]}
+              placeholder="Código de cupón"
+              value={couponCode}
+              onChangeText={(value) => setCouponCode(value.toUpperCase())}
+              autoCapitalize="characters"
+            />
+            <Pressable style={styles.applyCouponButton} onPress={handleApplyCoupon}>
+              <Text style={styles.applyCouponText}>Aplicar</Text>
+            </Pressable>
+          </View>
+          {coupons.filter((coupon) => coupon.available).slice(0, 3).map((coupon) => (
+            <Pressable
+              key={coupon.code}
+              style={[styles.availableCoupon, appliedCoupon?.code === coupon.code && styles.availableCouponSelected]}
+              onPress={() => handleSelectCoupon(coupon)}
+            >
+              <Text style={styles.availableCouponCode}>{coupon.code}</Text>
+              <Text style={styles.availableCouponAmount}>-${coupon.amount}</Text>
+            </Pressable>
+          ))}
+          {appliedCoupon ? (
+            <View style={styles.appliedCouponBox}>
+              <View style={styles.appliedCouponTextGroup}>
+                <Text style={styles.appliedCouponTitle}>Cupón aplicado</Text>
+                <Text style={styles.appliedCouponCode}>{appliedCoupon.code} (-${discountAmount})</Text>
+              </View>
+              <Pressable style={styles.removeCouponButton} onPress={handleRemoveCoupon}>
+                <Text style={styles.removeCouponText}>Quitar</Text>
+              </Pressable>
+            </View>
+          ) : null}
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Metodo de pago</Text>
-          {PAYMENT_OPTIONS.map((option) => (
+          {payableAmount <= 0 ? (
+            <Text style={styles.summaryText}>El cupón cubre el total. Se confirmará la reserva sin abrir Transbank.</Text>
+          ) : PAYMENT_OPTIONS.map((option) => (
             <Pressable
               key={option.id}
               style={[styles.paymentOption, paymentMethod === option.id && styles.paymentOptionSelected]}
@@ -234,7 +357,7 @@ const CheckoutFormIntegrated = () => {
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
         <Pressable style={[styles.payButton, submitting && styles.payButtonDisabled]} onPress={handleSubmit} disabled={submitting}>
-          <Text style={styles.payButtonText}>{submitting ? 'Procesando...' : 'Pagar'}</Text>
+          <Text style={styles.payButtonText}>{submitting ? 'Procesando...' : payableAmount <= 0 ? 'Finalizar reserva' : 'Pagar'}</Text>
         </Pressable>
       </ScrollView>
     </View>
@@ -287,6 +410,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#A168DE',
   },
+  discountText: {
+    marginTop: 8,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1d7a3e',
+  },
+  summaryTotal: {
+    marginTop: 8,
+    fontSize: 19,
+    fontWeight: '800',
+    color: '#222222',
+  },
   section: {
     marginTop: 18,
     backgroundColor: '#ffffff',
@@ -307,6 +442,84 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     marginBottom: 10,
     backgroundColor: '#ffffff',
+  },
+  couponRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  couponInput: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  applyCouponButton: {
+    marginLeft: 10,
+    borderRadius: 10,
+    backgroundColor: '#A168DE',
+    paddingHorizontal: 16,
+    height: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  applyCouponText: {
+    color: '#ffffff',
+    fontWeight: '700',
+  },
+  availableCoupon: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#ddd6f0',
+    borderRadius: 10,
+    padding: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  availableCouponSelected: {
+    borderColor: '#1d7a3e',
+    backgroundColor: '#eef9f1',
+  },
+  availableCouponCode: {
+    color: '#222222',
+    fontWeight: '800',
+  },
+  availableCouponAmount: {
+    color: '#1d7a3e',
+    fontWeight: '800',
+  },
+  appliedCouponBox: {
+    marginTop: 12,
+    borderRadius: 10,
+    backgroundColor: '#eef9f1',
+    padding: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  appliedCouponTextGroup: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  appliedCouponTitle: {
+    color: '#1d7a3e',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  appliedCouponCode: {
+    marginTop: 3,
+    color: '#222222',
+    fontWeight: '800',
+  },
+  removeCouponButton: {
+    borderRadius: 9,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#1d7a3e',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  removeCouponText: {
+    color: '#1d7a3e',
+    fontWeight: '800',
   },
   paymentOption: {
     borderWidth: 1,

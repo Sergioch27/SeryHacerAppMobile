@@ -8,6 +8,7 @@ import {
   confirmReservationPaymentFromReturn,
   setPaymentFailure,
 } from '../features/cart/cartReservationSlice';
+import { fetchUserCoupons } from '../features/coupons/couponsSlice';
 
 const PaymentResult = () => {
   const route = useRoute();
@@ -49,6 +50,15 @@ const PaymentResult = () => {
     }
   }, [dispatch, externalReference, status, tokenWs]);
 
+  const isSuccess = paymentResult?.status === 'success';
+  const summary = paymentResult?.summary ?? null;
+
+  useEffect(() => {
+    if (isSuccess && summary?.couponCode) {
+      dispatch(fetchUserCoupons({ availableOnly: true }));
+    }
+  }, [dispatch, isSuccess, summary?.couponCode]);
+
   if (!paymentResult) {
     return (
       <View style={styles.container}>
@@ -58,14 +68,24 @@ const PaymentResult = () => {
     );
   }
 
-  const isSuccess = paymentResult.status === 'success';
-
   return (
     <View style={styles.container}>
       <Text style={[styles.title, isSuccess ? styles.success : styles.error]}>
         {isSuccess ? 'Pago confirmado' : 'Pago no completado'}
       </Text>
       <Text style={styles.message}>{paymentResult.message}</Text>
+      {isSuccess && summary ? (
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryTitle}>{summary.productName}</Text>
+          {(summary.reservationsLabel ?? []).map((label, index) => (
+            <Text key={`${label}-${index}`} style={styles.summaryLine}>{label}</Text>
+          ))}
+          <Text style={styles.summaryLine}>Subtotal: ${summary.subtotal ?? 0}</Text>
+          {summary.discount ? <Text style={styles.discountLine}>Descuento: -${summary.discount}</Text> : null}
+          {summary.couponCode ? <Text style={styles.summaryLine}>Cupón: {summary.couponCode}</Text> : null}
+          <Text style={styles.totalLine}>Total pagado: ${summary.total ?? 0}</Text>
+        </View>
+      ) : null}
       <Pressable
         style={styles.primaryButton}
         onPress={() => navigation.navigate('ShopTab', { screen: isSuccess ? 'OrderView' : 'ProductView' })}
@@ -105,6 +125,36 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     color: '#555555',
+  },
+  summaryCard: {
+    alignSelf: 'stretch',
+    marginTop: 20,
+    borderRadius: 14,
+    backgroundColor: '#ffffff',
+    padding: 16,
+  },
+  summaryTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#222222',
+    marginBottom: 8,
+  },
+  summaryLine: {
+    fontSize: 14,
+    lineHeight: 21,
+    color: '#555555',
+  },
+  discountLine: {
+    fontSize: 14,
+    lineHeight: 21,
+    color: '#1d7a3e',
+    fontWeight: '700',
+  },
+  totalLine: {
+    marginTop: 8,
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#222222',
   },
   primaryButton: {
     marginTop: 28,

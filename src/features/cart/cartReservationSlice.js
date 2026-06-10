@@ -306,7 +306,13 @@ export const expireReservationItems = createAsyncThunk(
 
 export const startReservationCheckout = createAsyncThunk(
   'cart/startReservationCheckout',
-  async ({ cartKey, checkoutData, paymentMethod = 'transbank' }, { getState, rejectWithValue }) => {
+  async ({
+    cartKey,
+    checkoutData,
+    paymentMethod = 'transbank',
+    coupon = null,
+    discountAmount = 0,
+  }, { getState, rejectWithValue }) => {
     const item = getState().cart.items.find((entry) => entry.cartKey === cartKey);
 
     if (!item) {
@@ -316,15 +322,21 @@ export const startReservationCheckout = createAsyncThunk(
     try {
       const externalReference = item.externalReference || buildExistingExternalReference();
       const paymentPayload = buildPaymentPayload(item);
+      const subtotal = paymentPayload.payment.amount;
+      const discount = Math.min(Math.max(Number(discountAmount) || 0, 0), subtotal);
+      const payableAmount = Math.max(subtotal - discount, 0);
       console.error('[startReservationCheckout] begin:', JSON.stringify({
         cartKey,
         bookingId: item.bookingId,
         productId: item.productId,
         variationId: item.variationId,
-        amount: paymentPayload?.payment?.amount ?? null,
+        amount: payableAmount,
+        subtotal,
+        discount,
         externalReference,
         checkoutData,
         paymentMethod,
+        coupon,
       }, null, 2));
       const initResponse = await InitMobileReservationPayment({
         externalReference,
@@ -333,11 +345,57 @@ export const startReservationCheckout = createAsyncThunk(
         ...paymentPayload,
         payment: {
           ...paymentPayload.payment,
+          amount: payableAmount,
+          subtotal,
+          discount_total: discount,
           method: paymentMethod,
-          method_title: paymentMethod === 'transbank' ? 'Transbank Webpay' : paymentMethod,
+          method_title: payableAmount <= 0 ? 'Cupón' : paymentMethod === 'transbank' ? 'Transbank Webpay' : paymentMethod,
         },
+        coupon,
       });
       console.error('[startReservationCheckout] wp init response:', JSON.stringify(initResponse, null, 2));
+
+      if (payableAmount <= 0) {
+        const confirmResponse = await ConfirmMobileReservationPayment({
+          orderId: initResponse.orderId,
+          bookingId: initResponse.bookingId ?? item.bookingId,
+          externalReference: initResponse.externalReference ?? externalReference,
+          payment: {
+            status: 'paid',
+            amount: 0,
+            subtotal,
+            discount_total: discount,
+            method: 'coupon',
+            method_title: 'Cupón',
+            transaction_id: coupon?.code ? `COUPON-${coupon.code}` : `COUPON-${externalReference}`,
+            paid_at: new Date().toISOString(),
+            coupon,
+          },
+        });
+
+        return {
+          cartKey,
+          completed: true,
+          orderId: confirmResponse.orderId ?? initResponse.orderId,
+          bookingId: confirmResponse.bookingId ?? initResponse.bookingId ?? item.bookingId,
+          externalReference: initResponse.externalReference ?? externalReference,
+          bookingState: confirmResponse.bookingState ?? initResponse.bookingState,
+          paymentUrl: null,
+          tokenWs: null,
+          transactionId: coupon?.code ? `COUPON-${coupon.code}` : null,
+          summary: {
+            productName: item.productName,
+            reservationsLabel: item.reservationsLabel,
+            bookingType: item.bookingType,
+            subtotal,
+            discount,
+            total: 0,
+            couponCode: coupon?.code ?? null,
+            coupon: coupon ?? null,
+          },
+        };
+      }
+
       const chatUrl = BuildChatUrl(initResponse.externalReference ?? externalReference);
       console.error('[startReservationCheckout] transbank request meta:', JSON.stringify({
         chatUrl,
@@ -345,7 +403,7 @@ export const startReservationCheckout = createAsyncThunk(
       }, null, 2));
       const transbankResponse = await initiateTransbankPayment({
         externalReference: initResponse.externalReference ?? externalReference,
-        amount: getReservationAmount(item.productPrice, item.quantity),
+        amount: payableAmount,
         chatUrl,
         customer: checkoutData,
       });
@@ -362,6 +420,16 @@ export const startReservationCheckout = createAsyncThunk(
         bookingState: initResponse.bookingState,
         paymentUrl: transbankResponse.paymentUrl,
         tokenWs: transbankResponse.tokenWs,
+        summary: {
+          productName: item.productName,
+          reservationsLabel: item.reservationsLabel,
+          bookingType: item.bookingType,
+          subtotal,
+          discount,
+          total: payableAmount,
+          couponCode: coupon?.code ?? null,
+          coupon: coupon ?? null,
+        },
       };
     } catch (error) {
       console.error('[startReservationCheckout] error:', JSON.stringify({
@@ -416,11 +484,13 @@ export const confirmReservationPaymentFromReturn = createAsyncThunk(
         payment: {
           status: 'paid',
           amount: transbankResponse.amount || getReservationAmount(item.productPrice, item.quantity),
-          subtotal: transbankResponse.amount || getReservationAmount(item.productPrice, item.quantity),
+          subtotal: item.paymentSummary?.subtotal ?? transbankResponse.amount ?? getReservationAmount(item.productPrice, item.quantity),
+          discount_total: item.paymentSummary?.discount ?? 0,
           method: 'transbank',
           method_title: 'Transbank Webpay',
           transaction_id: transbankResponse.transactionId,
           paid_at: transbankResponse.paidAt,
+          coupon: item.paymentSummary?.coupon ?? null,
         },
       });
 
@@ -430,6 +500,16 @@ export const confirmReservationPaymentFromReturn = createAsyncThunk(
         bookingId: confirmResponse.bookingId ?? item.bookingId,
         externalReference: item.externalReference,
         transactionId: transbankResponse.transactionId,
+        summary: {
+          productName: item.productName,
+          reservationsLabel: item.reservationsLabel,
+          bookingType: item.bookingType,
+          subtotal: item.paymentSummary?.subtotal ?? getReservationAmount(item.productPrice, item.quantity),
+          discount: item.paymentSummary?.discount ?? 0,
+          total: transbankResponse.amount || item.paymentSummary?.total || getReservationAmount(item.productPrice, item.quantity),
+          couponCode: item.paymentSummary?.couponCode ?? null,
+          coupon: item.paymentSummary?.coupon ?? null,
+        },
       };
     } catch (error) {
       return rejectWithValue({
@@ -517,6 +597,21 @@ const cartSlice = createSlice({
           state.items[index].reservationState = action.payload.bookingState ?? 'pending';
           state.items[index].paymentUrl = action.payload.paymentUrl;
           state.items[index].tokenWs = action.payload.tokenWs;
+          state.items[index].paymentSummary = action.payload.summary ?? null;
+
+          if (action.payload.completed) {
+            state.bookingMap[action.payload.orderId] = action.payload.bookingId;
+            state.paymentResult = {
+              status: 'success',
+              message: `Reserva confirmada para la orden #${action.payload.orderId}.`,
+              orderId: action.payload.orderId,
+              bookingId: action.payload.bookingId,
+              externalReference: action.payload.externalReference,
+              transactionId: action.payload.transactionId,
+              summary: action.payload.summary ?? null,
+            };
+            state.items.splice(index, 1);
+          }
         }
       })
       .addCase(startReservationCheckout.rejected, (state, action) => {
@@ -546,6 +641,7 @@ const cartSlice = createSlice({
             bookingId: action.payload.bookingId,
             externalReference: action.payload.externalReference,
             transactionId: action.payload.transactionId,
+            summary: action.payload.summary ?? null,
           };
           state.items.splice(index, 1);
         }

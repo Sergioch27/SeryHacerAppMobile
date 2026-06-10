@@ -42,6 +42,76 @@ const statusMap = {
   refunded: 'Reembolsada',
 };
 
+const hiddenMetaKeys = [
+  'bookacti_bookings',
+  'bookacti_booking',
+  '_booking_id',
+  'booking_id',
+  'app_booking_id',
+  'reservation_booking_id',
+];
+
+const pad = (value) => String(value).padStart(2, '0');
+
+const normalizeMetaValue = (value) => {
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+};
+
+const formatTime = (value) => {
+  if (!value) {
+    return '';
+  }
+
+  return String(value).slice(0, 5);
+};
+
+const formatReservationValue = (value) => {
+  const normalizedValue = normalizeMetaValue(value);
+  const reservations = Array.isArray(normalizedValue) ? normalizedValue : [normalizedValue];
+
+  return reservations.map((reservation) => {
+    if (!reservation || typeof reservation !== 'object') {
+      return String(reservation ?? '');
+    }
+
+    const year = reservation.año ?? reservation.year;
+    const month = reservation.mes ?? reservation.month;
+    const day = reservation.dia ?? reservation.day;
+    const start = reservation.horaInicio ?? reservation.start;
+    const end = reservation.horaFin ?? reservation.end;
+
+    if (!year || !month || !day || !start) {
+      return '';
+    }
+
+    return `${pad(day)}/${pad(month)}/${year}, ${formatTime(start)} a ${formatTime(end)}`;
+  }).filter(Boolean);
+};
+
+const shouldShowMeta = (meta) => {
+  const key = String(meta?.key ?? '').toLowerCase();
+
+  if (!key || hiddenMetaKeys.includes(key) || key.startsWith('_')) {
+    return false;
+  }
+
+  return key !== 'reservas_app';
+};
+
+const getItemReservations = (item) => (
+  (item?.meta_data ?? [])
+    .filter((meta) => meta.key === 'reservas_app')
+    .flatMap((meta) => formatReservationValue(meta.value))
+);
+
 const DetailSection = ({ title, children }) => (
   <View style={styles.section}>
     <Text style={styles.sectionTitle}>{title}</Text>
@@ -84,7 +154,7 @@ const OrderDetails = () => {
       (item.meta_data ?? []).filter((meta) => meta.key === 'reservas_app')
     ) ?? [];
 
-    return itemMetaReservations;
+    return itemMetaReservations.flatMap((meta) => formatReservationValue(meta.value));
   }, [order]);
 
   const bookingId = useMemo(() => extractBookingIdFromOrder(order, bookingMap), [order, bookingMap]);
@@ -174,8 +244,8 @@ const OrderDetails = () => {
 
             <DetailSection title="Resumen de reservas">
               {reservationsSummary.length > 0 ? reservationsSummary.map((reservation, index) => (
-                <Text key={`${reservation.id ?? index}`} style={styles.infoText}>
-                  {Array.isArray(reservation.value) ? reservation.value.join(' | ') : String(reservation.value)}
+                <Text key={`${reservation}-${index}`} style={styles.infoText}>
+                  {reservation}
                 </Text>
               )) : <Text style={styles.infoText}>Sin detalle adicional de reservas.</Text>}
             </DetailSection>
@@ -188,9 +258,21 @@ const OrderDetails = () => {
         renderItem={({ item }) => (
           <View style={styles.productCard}>
             <Text style={styles.productName}>{item.name}</Text>
+            {getItemReservations(item).length > 0 ? (
+              <View style={styles.reservationBox}>
+                <Text style={styles.reservationTitle}>Horario reservado</Text>
+                {getItemReservations(item).map((reservation, index) => (
+                  <Text key={`${item.id}-reservation-${index}`} style={styles.reservationText}>{reservation}</Text>
+                ))}
+              </View>
+            ) : null}
             <Text style={styles.infoText}>Cantidad: {item.quantity}</Text>
+            {item.sku ? <Text style={styles.infoText}>SKU: {item.sku}</Text> : null}
+            {item.product_id ? <Text style={styles.infoText}>Producto ID: {item.product_id}</Text> : null}
+            {item.variation_id ? <Text style={styles.infoText}>Variación ID: {item.variation_id}</Text> : null}
+            <Text style={styles.infoText}>Subtotal: {formatCurrency(item.subtotal)}</Text>
             <Text style={styles.infoText}>Total: {formatCurrency(item.total)}</Text>
-            {(item.meta_data ?? []).map((meta) => (
+            {(item.meta_data ?? []).filter(shouldShowMeta).map((meta) => (
               <Text key={`${item.id}-${meta.id}-${meta.key}`} style={styles.metaText}>
                 {meta.key}: {Array.isArray(meta.value) ? meta.value.join(' | ') : String(meta.value)}
               </Text>
@@ -303,6 +385,24 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#222222',
     marginBottom: 8,
+  },
+  reservationBox: {
+    borderRadius: 12,
+    backgroundColor: '#f4effb',
+    padding: 12,
+    marginBottom: 12,
+  },
+  reservationTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#6b3ba8',
+    marginBottom: 5,
+  },
+  reservationText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#222222',
+    fontWeight: '700',
   },
   metaText: {
     marginTop: 6,
